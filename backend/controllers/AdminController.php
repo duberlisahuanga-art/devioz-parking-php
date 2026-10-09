@@ -45,13 +45,16 @@ final class AdminController
             'summary' => Space::stats(),
         ];
     }
+    public static function payments(array $filters = []): array
+{
+    require_admin();
 
-    public static function payments(): array
-    {
-        require_admin();
-        return Payment::pending();
-    }
-
+    return [
+        'payments' => Payment::allForAdmin($filters),
+        'summary' => Payment::adminSummary(),
+        'drivers' => Payment::driversWithPayments(),
+    ];
+}
     public static function confirmPayment(int $paymentId): void
     {
         PaymentController::confirm($paymentId);

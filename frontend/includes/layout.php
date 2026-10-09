@@ -638,7 +638,9 @@ function render_page_start(
                     class="btn topbar-menu-btn d-lg-none"
                     type="button"
                     id="sidebarToggle"
-                    aria-label="Abrir menú">
+                    aria-label="Abrir menú"
+                    aria-controls="sidebar"
+                    aria-expanded="false">
 
                     <i class="bi bi-list"></i>
 

@@ -44,6 +44,41 @@ final class User
         $stmt->execute($params);
         return $stmt->fetchAll();
     }
+    public static function create(array $data): int
+{
+    $stmt = db()->prepare(
+        'INSERT INTO users
+        (
+            name,
+            email,
+            password,
+            role,
+            status,
+            created_at,
+            updated_at
+        )
+        VALUES
+        (
+            :name,
+            :email,
+            :password,
+            :role,
+            :status,
+            NOW(),
+            NOW()
+        )'
+    );
+
+    $stmt->execute([
+        'name' => $data['name'],
+        'email' => strtolower(trim((string) $data['email'])),
+        'password' => $data['password'],
+        'role' => $data['role'],
+        'status' => $data['status'],
+    ]);
+
+    return (int) db()->lastInsertId();
+}
 
     public static function summary(): array
     {

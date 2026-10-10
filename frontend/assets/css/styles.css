@@ -7,6 +7,7 @@
   --navy-light: #172554;
 
   --sidebar-width: 272px;
+  --sidebar-collapsed-width: 78px;
 
   --surface: #ffffff;
   --background: #f5f7fb;
@@ -121,6 +122,7 @@ textarea {
 
   overflow-y: auto;
   overflow-x: hidden;
+  transition: width 0.22s ease, padding 0.22s ease;
 }
 
 /* Scroll sidebar */
@@ -525,6 +527,95 @@ textarea {
     rgba(239, 68, 68, 0.35);
 }
 
+/* Sidebar compacto: exclusivo de escritorio */
+.sidebar-collapse-toggle {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: white;
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.sidebar-collapse-toggle:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+@media (min-width: 992px) {
+  .sidebar .brand-wrap {
+    padding-top: 1.85rem;
+  }
+
+  body.sidebar-collapsed .sidebar {
+    width: var(--sidebar-collapsed-width);
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  body.sidebar-collapsed .main-content {
+    margin-left: var(--sidebar-collapsed-width);
+    width: calc(100% - var(--sidebar-collapsed-width));
+  }
+
+  body.sidebar-collapsed .sidebar .brand-wrap {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+    gap: 0;
+  }
+
+  body.sidebar-collapsed .sidebar .brand-text,
+  body.sidebar-collapsed .sidebar .sidebar-user-info,
+  body.sidebar-collapsed .sidebar .sidebar-section-label,
+  body.sidebar-collapsed .sidebar .nav-item-content,
+  body.sidebar-collapsed .sidebar .sidebar-session-info,
+  body.sidebar-collapsed .sidebar .btn-sidebar-logout span {
+    display: none;
+  }
+
+  body.sidebar-collapsed .sidebar .sidebar-user-card {
+    justify-content: center;
+    padding: 0.4rem 0;
+    gap: 0;
+  }
+
+  body.sidebar-collapsed .sidebar .nav-item {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+    gap: 0;
+  }
+
+  body.sidebar-collapsed .sidebar .nav-item:hover {
+    transform: none;
+  }
+
+  body.sidebar-collapsed .sidebar .nav-active-indicator {
+    left: 3px;
+    right: auto;
+  }
+
+  body.sidebar-collapsed .sidebar .sidebar-session {
+    justify-content: center;
+    gap: 0;
+  }
+
+  body.sidebar-collapsed .sidebar .btn-sidebar-logout {
+    width: 46px;
+    min-height: 44px;
+    margin-inline: auto;
+    padding: 0.65rem 0;
+    gap: 0;
+    font-size: 1rem;
+  }
+}
+
 /* ============================================================
    OVERLAY
 ============================================================ */
@@ -565,6 +656,7 @@ textarea {
 
   min-width: 0;
   width: calc(100% - var(--sidebar-width));
+  transition: width 0.22s ease, margin-left 0.22s ease;
 }
 
 /* ============================================================
@@ -2480,6 +2572,7 @@ textarea.form-control {
 @media (max-width: 991px) {
 
   .sidebar {
+    width: var(--sidebar-width);
     transform: translateX(-100%);
     transition: transform 0.23s ease;
     box-shadow: 0 18px 46px rgba(15, 23, 42, 0.18);

@@ -754,6 +754,69 @@ if (voucherModal) {
     const toggle = document.getElementById('sidebarToggle');
     const close = document.getElementById('sidebarClose');
     const overlay = document.getElementById('sidebarOverlay');
+    const collapseToggle = document.getElementById('sidebarCollapseToggle');
+    const sidebarStorageKey = 'devioz_sidebar_collapsed';
+    const isDesktopSidebar = () => window.innerWidth >= 992;
+    let preferredSidebarCollapsed = false;
+
+    if (sidebar && collapseToggle) {
+        try {
+            preferredSidebarCollapsed =
+                localStorage.getItem(sidebarStorageKey) === '1';
+        } catch {
+            // El menú sigue funcionando si el navegador bloquea el almacenamiento.
+        }
+    }
+
+    const updateSidebarCollapseUI = () => {
+        if (!collapseToggle) return;
+
+        const collapsed = document.body.classList.contains('sidebar-collapsed');
+        const label = collapsed
+            ? 'Expandir menú lateral'
+            : 'Minimizar menú lateral';
+
+        collapseToggle.setAttribute('aria-expanded', String(!collapsed));
+        collapseToggle.setAttribute('aria-label', label);
+        collapseToggle.title = label;
+
+        const icon = collapseToggle.querySelector('i');
+        if (icon) {
+            icon.className = collapsed
+                ? 'bi bi-chevron-right'
+                : 'bi bi-chevron-left';
+        }
+    };
+
+    const setSidebarCollapsed = (collapsed, persist = true) => {
+        if (!sidebar || !collapseToggle) return;
+
+        document.body.classList.toggle(
+            'sidebar-collapsed',
+            isDesktopSidebar() && collapsed
+        );
+        updateSidebarCollapseUI();
+
+        if (persist) {
+            preferredSidebarCollapsed = collapsed;
+            try {
+                localStorage.setItem(sidebarStorageKey, collapsed ? '1' : '0');
+            } catch {
+                // Conserva la preferencia en memoria durante esta página.
+            }
+        }
+    };
+
+    setSidebarCollapsed(preferredSidebarCollapsed, false);
+
+    if (collapseToggle) {
+        collapseToggle.addEventListener('click', () => {
+            if (!isDesktopSidebar()) return;
+            setSidebarCollapsed(
+                !document.body.classList.contains('sidebar-collapsed')
+            );
+        });
+    }
 
     const openSidebar = () => {
         if (!sidebar) return;
@@ -805,9 +868,10 @@ if (voucherModal) {
     });
 
     window.addEventListener('resize', () => {
-        if (window.innerWidth >= 992) {
+        if (isDesktopSidebar()) {
             closeSidebar();
         }
+        setSidebarCollapsed(preferredSidebarCollapsed, false);
     });
 
     document

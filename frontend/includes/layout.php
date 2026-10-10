@@ -482,6 +482,17 @@ function render_page_start(
 
             <button
                 type="button"
+                class="sidebar-collapse-toggle d-none d-lg-grid"
+                id="sidebarCollapseToggle"
+                aria-controls="sidebar"
+                aria-label="Minimizar menú lateral"
+                aria-expanded="true"
+                title="Minimizar menú lateral">
+                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+            </button>
+
+            <button
+                type="button"
                 class="sidebar-close d-lg-none"
                 id="sidebarClose"
                 aria-label="Cerrar menú">
@@ -547,7 +558,8 @@ function render_page_start(
                     <?= $active === $key
                         ? 'aria-current="page"'
                         : '' ?>
-                    title="<?= h($subtitle) ?>"
+                    title="<?= h($label) ?>"
+                    aria-label="<?= h($label) ?>"
                 >
 
                     <span class="nav-icon">
@@ -605,6 +617,8 @@ function render_page_start(
 
             <a
                 class="btn btn-sidebar-logout"
+                aria-label="Cerrar sesión"
+                title="Cerrar sesión"
                 href="<?= h(
                     app_url(
                         '/frontend/logout.php'

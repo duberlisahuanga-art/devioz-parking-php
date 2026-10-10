@@ -1,4 +1,27 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Filtros del mapa del dashboard; independientes del formulario de reservas.
+    document.querySelectorAll('[data-dashboard-map]').forEach((map) => {
+        const buttons = map.querySelectorAll('[data-dashboard-filter]');
+        const spaces = map.querySelectorAll('[data-dashboard-space]');
+        const empty = map.querySelector('[data-dashboard-empty]');
+        buttons.forEach((button) => {
+            button.addEventListener('click', () => {
+                const status = button.dataset.dashboardFilter;
+                let visible = 0;
+                spaces.forEach((space) => {
+                    space.hidden = status !== 'all' && space.dataset.dashboardSpace !== status;
+                    if (!space.hidden) visible++;
+                });
+                buttons.forEach((item) => {
+                    const selected = item === button;
+                    item.setAttribute('aria-pressed', String(selected));
+                    item.classList.toggle('active', selected);
+                });
+                if (empty) empty.hidden = visible > 0;
+            });
+        });
+    });
+
     /*
 |--------------------------------------------------------------------------
 | RESERVAR PLAZA - CONDUCTOR

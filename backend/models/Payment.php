@@ -379,4 +379,40 @@ final class Payment
 
         return (float) $stmt->fetchColumn();
     }
+
+    // La aprobación actualiza updated_at; el esquema no tiene paid_at.
+    public static function financeSummary(?string $start, string $end): array
+    {
+        $sql = "SELECT COALESCE(SUM(amount),0) AS total, COUNT(*) AS count FROM payments WHERE status='paid' AND COALESCE(updated_at,created_at)<:end";
+        $params = ['end' => $end];
+        if ($start !== null) {
+            $sql .= ' AND COALESCE(updated_at,created_at)>=:start';
+            $params['start'] = $start;
+        }
+        $stmt = db()->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetch();
+    }
+
+    public static function financePayments(array $filters): array
+    {
+        $sql = "SELECT py.*, COALESCE(py.updated_at,py.created_at) AS finance_datetime,
+            u.name AS user_name, s.code AS space_code, v.plate AS vehicle_plate,
+            v.brand AS vehicle_brand, v.model AS vehicle_model
+            FROM payments py
+            LEFT JOIN reservations r ON r.id=py.reservation_id
+            LEFT JOIN users u ON u.id=r.user_id
+            LEFT JOIN spaces s ON s.id=r.space_id
+            LEFT JOIN vehicles v ON v.id=r.vehicle_id
+            WHERE py.status='paid' AND COALESCE(py.updated_at,py.created_at)>=:start
+            AND COALESCE(py.updated_at,py.created_at)<:end";
+        $params = ['start' => $filters['start'], 'end' => $filters['end']];
+        if (($filters['search'] ?? '') !== '') {
+            $sql .= ' AND (u.name LIKE :q1 OR v.plate LIKE :q2 OR CAST(py.reservation_id AS CHAR) LIKE :q3 OR py.provider_tx_id LIKE :q4 OR s.code LIKE :q5 OR CONCAT("Reserva #",py.reservation_id) LIKE :q6 OR "Pago aprobado" LIKE :q7)';
+            for ($i=1; $i<=7; $i++) $params['q'.$i] = '%' . $filters['search'] . '%';
+        }
+        $stmt = db()->prepare($sql . ' ORDER BY finance_datetime DESC, py.id DESC');
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
 }

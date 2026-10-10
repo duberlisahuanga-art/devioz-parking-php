@@ -100,3 +100,6 @@ require_once __DIR__ . '/controllers/ReservationController.php';
 require_once __DIR__ . '/controllers/PaymentController.php';
 require_once __DIR__ . '/controllers/CameraController.php';
 require_once __DIR__ . '/controllers/AdminController.php';
+
+require_once __DIR__ . '/models/Expense.php';
+require_once __DIR__ . '/controllers/FinanceController.php';

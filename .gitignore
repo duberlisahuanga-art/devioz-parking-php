@@ -1,0 +1,8 @@
+# Archivos generados por usuarios
+backend/uploads/comprobantes/*
+backend/uploads/egresos/*
+
+# Mantener estructura y protecci?n de carpetas
+!backend/uploads/comprobantes/.gitkeep
+!backend/uploads/egresos/.gitkeep
+!backend/uploads/egresos/.htaccess

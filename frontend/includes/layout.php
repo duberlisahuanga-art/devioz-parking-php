@@ -377,8 +377,6 @@ function render_page_start(
 
     $roleLabel = role_label($role);
 
-    $roleIcon = role_icon($role);
-
     $items = menu_items($role);
 
     $userName = (string) (
@@ -500,31 +498,6 @@ function render_page_start(
                 <i class="bi bi-x-lg"></i>
 
             </button>
-
-        </div>
-
-        <!-- Perfil -->
-        <div class="sidebar-user-card">
-
-            <div class="sidebar-avatar">
-                <?= h($initials) ?>
-            </div>
-
-            <div class="sidebar-user-info">
-
-                <div class="sidebar-user-name">
-                    <?= h($userName) ?>
-                </div>
-
-                <div class="sidebar-user-role">
-
-                    <i class="bi <?= h($roleIcon) ?>"></i>
-
-                    <?= h($roleLabel) ?>
-
-                </div>
-
-            </div>
 
         </div>
 
@@ -691,15 +664,6 @@ function render_page_start(
             </div>
 
             <div class="topbar-actions">
-
-                <!-- Estado -->
-                <div class="system-status d-none d-md-flex">
-
-                    <span class="status-dot"></span>
-
-                    Sistema operativo
-
-                </div>
 
                 <!-- Usuario -->
                 <div class="topbar-user">

@@ -31,7 +31,6 @@ render_page_start('Reservar plaza', 'reservar');
                 <button type="button" class="space-filter" data-filter="available">Libres</button>
                 <button type="button" class="space-filter" data-filter="reserved">Reservadas</button>
                 <button type="button" class="space-filter" data-filter="occupied">Ocupadas</button>
-                <button type="button" class="space-filter" data-filter="maintenance">Mantenimiento</button>
             </div>
 
             <?php if (!$data['vehicles']): ?>

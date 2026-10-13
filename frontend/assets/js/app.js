@@ -2173,3 +2173,371 @@ if (detailReservationId) {
 */
 
 });
+/* HMI de cámaras: navegación y reproductores encapsulados. */
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-camera-module]').forEach((root) => {
+        const find = (selector) => root.querySelector(selector);
+        const cameras = JSON.parse(find('[data-camera-data]').textContent);
+        const parking = find('[data-camera-parking]');
+        const form = find('[data-camera-form]');
+        const deletion = find('[data-camera-delete]');
+        const players = new Map();
+        let selected = null;
+        let currentView = 'grid';
+        let returnView = 'grid';
+        let globalMuted = true;
+        let zoom = 1;
+        const message = (text) => { find('[data-camera-message]').textContent = text; };
+        const element = (tag, className, text) => {
+            const node = document.createElement(tag);
+            if (className) node.className = className;
+            if (text !== undefined) node.textContent = text;
+            return node;
+        };
+        const button = (text, callback) => {
+            const node = element('button', '', text);
+            node.type = 'button';
+            node.addEventListener('click', callback);
+            return node;
+        };
+        const list = () => cameras.filter((camera) => Number(camera.parking_id) === Number(parking.value));
+        const cameraAt = (channel) => list().find((camera) => Number(camera.channel_number) === channel);
+        const firstCamera = () => list().find((camera) => camera.channel_number);
+        const safeEndpoint = (value) => {
+            if (!value) return false;
+            try {
+                const url = new URL(value);
+                return ['http:', 'https:'].includes(url.protocol) && !url.username && !url.password;
+            } catch { return false; }
+        };
+        const destroyPlayers = () => {
+            players.forEach((player) => {
+                clearTimeout(player.timer);
+                player.hls?.destroy();
+                player.video.pause();
+                player.video.removeAttribute('src');
+                player.video.load();
+            });
+            players.clear();
+        };
+        const diagnostic = (container, camera) => {
+            container.replaceChildren();
+            const player = camera && players.get(Number(camera.id));
+            const resolution = player?.video.videoWidth ? player.video.videoWidth + ' × ' + player.video.videoHeight : 'No disponible';
+            const rows = {
+                'Estado de cámara': camera ? (camera.status === 'active' ? 'Activa' : 'Inactiva') : 'No configurada',
+                'Protocolo': camera?.stream_protocol?.toUpperCase() || 'No disponible',
+                'Calidad del endpoint': camera ? (camera.preferred_quality === 'main' ? 'Main-stream' : 'Sub-stream') : 'No disponible',
+                'Resolución recibida': resolution,
+                'Bitrate': 'Sin telemetría',
+                'Latencia': 'Sin telemetría',
+                'Reproductor': player?.state || (camera?.stream_url ? 'Sin iniciar' : 'Pendiente de transcodificador')
+            };
+            Object.entries(rows).forEach(([label, value]) => container.append(element('dt', '', label), element('dd', '', value)));
+        };
+        const refreshDiagnostics = () => {
+            diagnostic(find('[data-camera-single-diagnostic]'), selected);
+            diagnostic(find('[data-camera-settings-diagnostic]'), selected);
+        };
+        const startPlayer = (camera, video, overlay, badge) => {
+            const player = { video, hls: null, timer: null, state: 'Sin iniciar' };
+            players.set(Number(camera.id), player);
+            const setState = (state, kind = '') => {
+                player.state = state;
+                badge.textContent = state;
+                badge.dataset.state = kind;
+                overlay.lastChild.textContent = state;
+                overlay.hidden = kind === 'online';
+                refreshDiagnostics();
+            };
+            const noSignal = () => { clearTimeout(player.timer); setState('Canal sin señal', 'error'); };
+            video.addEventListener('playing', () => { clearTimeout(player.timer); setState('En línea', 'online'); });
+            video.addEventListener('pause', () => { if (video.readyState >= 2) setState('Pausada'); });
+            video.addEventListener('error', noSignal);
+            video.addEventListener('loadedmetadata', refreshDiagnostics);
+            video.addEventListener('waiting', () => {
+                setState('Esperando señal');
+                clearTimeout(player.timer);
+                player.timer = setTimeout(noSignal, 15000);
+            });
+            const play = () => video.play().catch(() => {
+                if (player.state !== 'Canal sin señal') setState('Pulsa Play para reproducir');
+            });
+            player.play = play;
+            if (camera.status !== 'active') { setState('Inactiva'); return; }
+            if (!safeEndpoint(camera.stream_url)) { setState('Stream no configurado'); return; }
+            if (camera.stream_protocol === 'webrtc') { setState('WebRTC: requiere endpoint compatible y signaling'); return; }
+            if (location.protocol === 'https:' && new URL(camera.stream_url).protocol === 'http:') {
+                setState('Endpoint HTTP bloqueado en página HTTPS', 'error'); return;
+            }
+            setState('Conectando');
+            player.timer = setTimeout(noSignal, 15000);
+            try {
+                if (window.Hls?.isSupported()) {
+                    player.hls = new window.Hls({ enableWorker: true });
+                    player.hls.on(window.Hls.Events.MANIFEST_PARSED, play);
+                    player.hls.on(window.Hls.Events.ERROR, (_event, data) => {
+                        if (data.fatal) {
+                            noSignal();
+                            player.hls.destroy();
+                            player.hls = null;
+                        }
+                    });
+                    player.hls.loadSource(camera.stream_url);
+                    player.hls.attachMedia(video);
+                } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                    video.src = camera.stream_url;
+                    play();
+                } else {
+                    clearTimeout(player.timer);
+                    setState('HLS no disponible en este navegador', 'error');
+                }
+            } catch { noSignal(); }
+        };
+        const card = (channel, camera, single = false) => {
+            const article = element('article', 'camera-channel');
+            const stage = element('div', 'camera-channel-stage');
+            const overlay = element('div', 'camera-channel-overlay');
+            overlay.append(element('i', 'bi bi-camera-video-off'), element('span', '', 'No configurado'));
+            const top = element('div', 'camera-channel-top');
+            const badge = element('span', 'camera-channel-badge', 'No configurado');
+            top.append(element('span', 'camera-channel-tag', 'CANAL ' + channel), badge);
+            const bottom = element('div', 'camera-channel-bottom');
+            const title = element('div');
+            title.append(element('strong', '', camera?.name || 'Canal ' + channel), element('small', '', camera?.location || camera?.coverage || 'No configurado'));
+            const controls = element('div', 'camera-channel-controls');
+            if (camera) {
+                const video = element('video');
+                video.autoplay = true;
+                video.muted = globalMuted;
+                video.playsInline = true;
+                video.crossOrigin = 'anonymous';
+                video.style.filter = 'brightness(' + camera.brightness + '%) contrast(' + camera.contrast + '%) saturate(' + camera.saturation + '%)';
+                stage.append(video);
+                const osd = element('div', 'camera-channel-osd');
+                osd.dataset.cameraOsd = String(camera.id);
+                stage.append(osd);
+                controls.append(button(single ? 'Play / Pause' : 'Ampliar', () => single ? togglePlay() : openSingle(camera)));
+                controls.append(button('Configurar', () => openSettings(camera)));
+                if (!single) {
+                    stage.tabIndex = 0;
+                    stage.setAttribute('role', 'button');
+                    stage.setAttribute('aria-label', 'Ampliar ' + camera.name);
+                    stage.addEventListener('click', () => openSingle(camera));
+                    stage.addEventListener('keydown', (event) => {
+                        if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openSingle(camera); }
+                    });
+                }
+                // Start after DOM insertion; events and data stay local to this root.
+                queueMicrotask(() => { if (article.isConnected) startPlayer(camera, video, overlay, badge); });
+            } else {
+                controls.append(button('Configurar canal', () => openSettings(null, channel)));
+            }
+            stage.append(overlay, top);
+            bottom.append(title, controls);
+            article.append(stage, bottom);
+            return article;
+        };
+        const show = (view) => {
+            currentView = view;
+            root.querySelectorAll('[data-camera-view]').forEach((node) => { node.hidden = node.dataset.cameraView !== view; });
+            root.querySelectorAll('[data-camera-action="grid"],[data-camera-action="single"],[data-camera-action="manage"]').forEach((node) => {
+                node.setAttribute('aria-pressed', String(node.dataset.cameraAction === view));
+            });
+        };
+        const renderGrid = () => {
+            destroyPlayers();
+            show('grid');
+            const grid = find('[data-camera-grid]');
+            grid.replaceChildren();
+            for (let channel = 1; channel <= 4; channel++) grid.append(card(channel, cameraAt(channel)));
+            message('');
+        };
+        const openSingle = (camera) => {
+            if (!camera) { message('Selecciona un canal configurado.'); return; }
+            destroyPlayers();
+            selected = camera;
+            zoom = 1;
+            find('[data-camera-action="zoom"]').textContent = 'Zoom: 1×';
+            find('[data-camera-single]').replaceChildren(card(Number(camera.channel_number), camera, true));
+            find('[data-camera-single-name]').textContent = camera.name;
+            find('[data-camera-single-coverage]').textContent = [camera.location, camera.coverage].filter(Boolean).join(' · ');
+            find('[data-camera-quality]').value = camera.preferred_quality;
+            show('single');
+            refreshDiagnostics();
+            message('');
+        };
+        const tab = (name) => {
+            root.querySelectorAll('[data-camera-panel]').forEach((node) => { node.hidden = node.dataset.cameraPanel !== name; });
+            root.querySelectorAll('[data-camera-tab]').forEach((node) => { node.setAttribute('aria-pressed', String(node.dataset.cameraTab === name)); });
+        };
+        const defaults = (channel) => ({
+            parking_id: parking.value, name: '', channel_number: channel, location: '', coverage: '', status: 'active',
+            rtsp_path: '/Streaming/Channels/' + channel + '02', stream_url: '', stream_protocol: 'hls',
+            preferred_quality: 'sub', brightness: 100, contrast: 100, saturation: 100, osd_datetime: 1, osd_camera_name: 1
+        });
+        const openSettings = (camera, channel = 1) => {
+            const previousPreview = find('[data-camera-test-preview]');
+            if (previousPreview) { destroyPlayers(); previousPreview.remove(); }
+            returnView = currentView === 'single' ? 'single' : (currentView === 'manage' ? 'manage' : 'grid');
+            selected = camera;
+            const data = camera || defaults(channel);
+            form.reset();
+            Object.entries(data).forEach(([key, value]) => {
+                const input = form.elements.namedItem(key);
+                if (!input) return;
+                if (input.type === 'checkbox') input.checked = Number(value) === 1;
+                else input.value = value ?? '';
+            });
+            form.elements.action.value = camera ? 'update' : 'create';
+            form.elements.camera_id.value = camera?.id || '';
+            deletion.hidden = !camera;
+            deletion.elements.camera_id.value = camera?.id || '';
+            find('[data-camera-settings-title]').textContent = camera ? 'Configuración · ' + camera.name : 'Configurar canal ' + channel;
+            ['brightness', 'contrast', 'saturation'].forEach((key) => { find('[data-camera-output="' + key + '"]').textContent = data[key] + '%'; });
+            tab('device');
+            show('settings');
+            refreshDiagnostics();
+            message('');
+        };
+        const manage = () => {
+            destroyPlayers();
+            const container = find('[data-camera-management]');
+            container.replaceChildren();
+            list().forEach((camera) => {
+                const row = element('div', 'camera-management-row');
+                row.append(element('span', '', camera.name + ' · ' + (camera.channel_number ? 'Canal ' + camera.channel_number : 'Sin canal asignado')), button('Configurar', () => openSettings(camera)));
+                container.append(row);
+            });
+            if (!list().length) container.append(element('p', '', 'No hay cámaras registradas.'));
+            show('manage');
+        };
+        const togglePlay = () => {
+            const player = selected && players.get(Number(selected.id));
+            if (!player) return;
+            if (player.video.paused) player.play?.();
+            else player.video.pause();
+        };
+        const fullscreen = async (node) => {
+            try {
+                if (document.fullscreenElement) await document.exitFullscreen();
+                else if (node?.requestFullscreen) await node.requestFullscreen();
+                else message('Pantalla completa no disponible.');
+            } catch { message('No se pudo abrir pantalla completa.'); }
+        };
+        const snapshot = () => {
+            const video = selected && players.get(Number(selected.id))?.video;
+            if (!video?.videoWidth || video.readyState < 2) { message('No hay un fotograma disponible para capturar.'); return; }
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const context = canvas.getContext('2d');
+                context.filter = video.style.filter;
+                context.drawImage(video, 0, 0);
+                canvas.toBlob((blob) => {
+                    if (!blob) { message('No se pudo generar la captura.'); return; }
+                    const url = URL.createObjectURL(blob);
+                    const link = element('a');
+                    link.href = url;
+                    link.download = 'canal-' + selected.channel_number + '-' + Date.now() + '.png';
+                    link.click();
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    message('Captura generada; descarga solicitada al navegador.');
+                }, 'image/png');
+            } catch { message('No se pudo capturar el vídeo. Verifica los permisos CORS del endpoint.'); }
+        };
+        root.addEventListener('click', (event) => {
+            const target = event.target.closest('[data-camera-action],[data-camera-tab]');
+            if (!target || !root.contains(target)) return;
+            if (target.dataset.cameraTab) { tab(target.dataset.cameraTab); return; }
+            const action = target.dataset.cameraAction;
+            if (action === 'grid') renderGrid();
+            else if (action === 'single') openSingle(selected && Number(selected.parking_id) === Number(parking.value) ? selected : firstCamera());
+            else if (action === 'manage') manage();
+            else if (action === 'create') {
+                const channel = [1, 2, 3, 4].find((number) => !cameraAt(number));
+                if (channel) openSettings(null, channel);
+                else message('Los cuatro canales están configurados en este estacionamiento.');
+            }
+            else if (action === 'settings') openSettings(selected);
+            else if (action === 'back') {
+                if (returnView === 'single' && selected) openSingle(selected);
+                else if (returnView === 'manage') manage();
+                else renderGrid();
+            }
+            else if (action === 'play') togglePlay();
+            else if (action === 'mute') {
+                const video = selected && players.get(Number(selected.id))?.video;
+                if (video) { video.muted = !video.muted; message(video.muted ? 'Audio silenciado.' : 'Audio activado si el stream lo incluye.'); }
+            }
+            else if (action === 'audio') {
+                globalMuted = !globalMuted;
+                players.forEach((player) => { player.video.muted = globalMuted; });
+                target.textContent = globalMuted ? 'Audio global: silenciado' : 'Audio global: activado';
+                target.setAttribute('aria-pressed', String(!globalMuted));
+            }
+            else if (action === 'fullscreen') fullscreen(root);
+            else if (action === 'video-fullscreen') fullscreen(find('[data-camera-single] .camera-channel'));
+            else if (action === 'snapshot') snapshot();
+            else if (action === 'zoom') {
+                const video = selected && players.get(Number(selected.id))?.video;
+                zoom = zoom >= 3 ? 1 : zoom + 0.5;
+                if (video) video.style.transform = 'scale(' + zoom + ')';
+                target.textContent = 'Zoom: ' + zoom + '×';
+            }
+            else if (action === 'test' || action === 'restart') {
+                if (!selected) { message('Guarda la cámara antes de probar el stream.'); return; }
+                destroyPlayers();
+                const preview = card(Number(selected.channel_number), selected, true);
+                find('[data-camera-single]').replaceChildren(preview);
+                // A visible preview in diagnostics also works when opened from Gestión.
+                let holder = find('[data-camera-test-preview]');
+                if (!holder) {
+                    holder = element('div');
+                    holder.dataset.cameraTestPreview = '';
+                    find('[data-camera-panel="diagnostic"]').append(holder);
+                }
+                holder.replaceChildren(preview);
+                message('Prueba del endpoint guardado iniciada en el navegador.');
+            }
+        });
+        parking.addEventListener('change', () => { selected = null; renderGrid(); });
+        form.addEventListener('input', (event) => {
+            if (['brightness', 'contrast', 'saturation'].includes(event.target.name)) {
+                find('[data-camera-output="' + event.target.name + '"]').textContent = event.target.value + '%';
+            }
+        });
+        const updatePath = () => {
+            form.elements.rtsp_path.value = '/Streaming/Channels/' + form.elements.channel_number.value + (form.elements.preferred_quality.value === 'main' ? '01' : '02');
+        };
+        form.elements.channel_number.addEventListener('change', updatePath);
+        form.elements.preferred_quality.addEventListener('change', updatePath);
+        form.addEventListener('invalid', (event) => {
+            const panel = event.target.closest('[data-camera-panel]');
+            if (panel) tab(panel.dataset.cameraPanel);
+        }, true);
+        deletion.addEventListener('submit', (event) => {
+            if (!window.confirm('¿Eliminar esta cámara? El canal quedará sin configurar.')) event.preventDefault();
+        });
+        find('[data-camera-quality]').addEventListener('change', (event) => {
+            if (!selected) return;
+            if (event.target.value !== selected.preferred_quality) {
+                message('Configura y guarda el endpoint web de esa calidad en Red y streaming.');
+                event.target.value = selected.preferred_quality;
+            }
+        });
+        const clockTimer = setInterval(() => {
+            root.querySelectorAll('[data-camera-osd]').forEach((node) => {
+                const camera = cameras.find((item) => Number(item.id) === Number(node.dataset.cameraOsd));
+                node.textContent = [
+                    Number(camera?.osd_camera_name) ? camera.name : '',
+                    Number(camera?.osd_datetime) ? new Date().toLocaleString('es-PE') + ' · Hora del visor' : ''
+                ].filter(Boolean).join(' · ');
+                node.hidden = !node.textContent;
+            });
+        }, 1000);
+        window.addEventListener('pagehide', () => { clearInterval(clockTimer); destroyPlayers(); }, { once: true });
+        renderGrid();
+    });
+});

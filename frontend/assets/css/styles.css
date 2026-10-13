@@ -3800,3 +3800,52 @@ textarea.form-control {
   .dashboard-v3 .section-intro h2 { font-size:20px; }
   .dashboard-v3 .card-head { flex-wrap:wrap; }
 }
+/* Centro HMI: superficie y controles exclusivos de Cámaras. */
+.camera-hmi{background:radial-gradient(circle at 85% 0%,#102344 0,transparent 35%),#060b14;color:#e5edf8;padding:20px;border:1px solid #1e293b;border-radius:18px;min-width:0}
+.camera-hmi [hidden]{display:none!important}
+.camera-hmi-heading{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:18px}
+.camera-hmi h2{font-size:23px;margin:6px 0}.camera-hmi h3{font-size:16px;margin:0 0 16px}
+.camera-hmi p,.camera-hmi small{color:#8ea0b8;font-size:12px;line-height:1.6}
+.camera-hmi-eyebrow{font-size:10px;color:#60a5fa;letter-spacing:.14em;font-weight:800}
+.camera-hmi label{display:block;font-size:12px;margin-bottom:14px;min-width:0}
+.camera-hmi input:not([type=hidden]):not([type=checkbox]):not([type=range]),.camera-hmi select{display:block;width:100%;background:#091321;color:#e5edf8;border:1px solid #2b3b54;border-radius:9px;padding:10px;margin-top:7px;min-width:0}
+.camera-hmi input[type=range]{display:block;width:100%;accent-color:#3b82f6;margin:12px 0}
+.camera-hmi button{background:#101d31;color:#e5edf8;border:1px solid #2b3b54;border-radius:9px;padding:9px 12px;font-size:12px;cursor:pointer;line-height:1.5}
+.camera-hmi button:hover,.camera-hmi button[aria-pressed=true]{background:#203657;border-color:#3b82f6}
+.camera-hmi button:focus-visible,.camera-hmi input:focus-visible,.camera-hmi select:focus-visible{outline:2px solid #60a5fa;outline-offset:3px}
+.camera-hmi button:disabled{opacity:.45;cursor:not-allowed}
+.camera-hmi-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:14px}
+.camera-hmi-message{min-height:20px;margin:6px 0}
+.camera-monitor-shell{border:1px solid #1e293b;border-radius:14px;overflow:hidden;background:#091321}
+.camera-monitor-shell>header{display:flex;justify-content:space-between;gap:12px;padding:14px;font-size:12px}
+.camera-monitor-shell>header span{color:#8ea0b8}
+.camera-monitor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;background:#22304a}
+.camera-channel{min-width:0;background:#080d15;border:1px solid #1e293b;overflow:hidden}
+.camera-channel-stage{height:clamp(230px,26vw,390px);position:relative;overflow:hidden;background:radial-gradient(ellipse,#101c2e,#050a12)}
+.camera-channel video{width:100%;height:100%;object-fit:contain;display:block;transform-origin:center}
+.camera-channel-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:65px 20px;pointer-events:none;color:#8ea0b8}
+.camera-channel-overlay i{font-size:34px;color:#334b70}
+.camera-channel-top{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;gap:10px;pointer-events:none}
+.camera-channel-tag,.camera-channel-badge{background:#060b14dd;border:1px solid #27374f;border-radius:7px;padding:6px 9px;font-size:11px}
+.camera-channel-badge[data-state=online]{color:#86efac;border-color:#166534}.camera-channel-badge[data-state=error]{color:#fca5a5;border-color:#7f1d1d}
+.camera-channel-osd{position:absolute;left:12px;bottom:12px;color:#e5edf8;background:#060b14bb;padding:5px 8px;border-radius:5px;font-size:11px;pointer-events:none}
+.camera-channel-bottom{padding:12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.camera-channel-bottom strong{display:block;font-size:13px;overflow-wrap:anywhere}.camera-channel-bottom small{display:block;margin-top:4px}
+.camera-channel-controls{display:flex;gap:6px;flex-shrink:0}
+.camera-single-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px}
+.camera-single-layout .camera-channel-stage{height:clamp(320px,45vw,650px)}
+.camera-hmi-panel{background:#0f172a;border:1px solid #1e293b;padding:20px;border-radius:14px;min-width:0}
+.camera-hmi dl{font-size:12px;margin:16px 0}.camera-hmi dt{color:#8ea0b8;font-weight:400}.camera-hmi dd{margin:4px 0 12px;overflow-wrap:anywhere}
+.camera-settings-layout{display:grid;grid-template-columns:220px minmax(0,1fr);gap:16px}
+.camera-settings-nav{display:flex;flex-direction:column;gap:8px;align-self:start}
+.camera-settings-nav button{text-align:left;padding:14px}
+.camera-settings-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 20px}
+.camera-settings-check{display:flex!important;gap:10px;align-items:center}.camera-hmi output{float:right;color:#60a5fa}
+.camera-settings-save{border-top:1px solid #1e293b;padding-top:18px;margin-top:18px}
+.camera-hmi .camera-hmi-primary{background:#2563eb;border-color:#3b82f6}
+.camera-settings-danger{margin-top:20px;padding:18px;border:1px solid #63242d;background:#241016;border-radius:12px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+.camera-settings-danger p{margin:5px 0}.camera-settings-danger button{background:#7f1d1d}
+.camera-management-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 0;border-bottom:1px solid #1e293b}
+.camera-hmi:fullscreen{overflow:auto;border-radius:0}.camera-channel:fullscreen .camera-channel-stage{height:calc(100dvh - 80px)}
+@media(max-width:1150px){.camera-single-layout{grid-template-columns:minmax(0,1fr)}.camera-settings-layout{grid-template-columns:minmax(0,1fr)}.camera-settings-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:767px){.camera-hmi{padding:12px}.camera-hmi-heading{align-items:stretch;flex-direction:column}.camera-monitor-grid{grid-template-columns:minmax(0,1fr)}.camera-settings-fields{grid-template-columns:minmax(0,1fr)}.camera-settings-nav{grid-template-columns:repeat(2,minmax(0,1fr))}.camera-channel-bottom{align-items:flex-start;flex-direction:column}.camera-settings-danger{align-items:flex-start;flex-direction:column}.camera-monitor-shell>header{flex-direction:column}.camera-single-layout .camera-channel-stage{height:320px}}

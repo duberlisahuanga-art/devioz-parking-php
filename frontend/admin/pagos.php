@@ -131,6 +131,8 @@ function payment_filter_url(
 |--------------------------------------------------------------------------
 */
 
+$pageHasNext = count($payments) > 50;
+$payments = array_slice($payments,0,50);
 render_page_start(
     'Pagos',
     'pagos'
@@ -141,8 +143,8 @@ render_page_start(
 <style>
 
 .payments-kpi-card {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 18px;
     padding: 20px;
     height: 100%;
@@ -153,7 +155,7 @@ render_page_start(
 }
 
 .payments-kpi-label {
-    color: #64748b;
+    color: var(--muted);
     font-size: .78rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -162,7 +164,7 @@ render_page_start(
 }
 
 .payments-kpi-value {
-    color: #111827;
+    color: var(--text);
     font-size: 1.75rem;
     line-height: 1;
     font-weight: 800;
@@ -177,20 +179,20 @@ render_page_start(
     align-items: center;
     justify-content: center;
     font-size: 1.3rem;
-    background: #eff6ff;
-    color: #2563eb;
+    background: var(--primary-light);
+    color: var(--payments-accent, var(--primary));
 }
 
 .payments-filter-card {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
+    background: var(--surface);
+    border: 1px solid var(--border);
     border-radius: 18px;
     overflow: hidden;
 }
 
 .payments-filter-header {
     padding: 20px 22px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border);
 }
 
 .payments-filter-header h2 {
@@ -201,14 +203,14 @@ render_page_start(
 
 .payments-filter-header p {
     margin: 5px 0 0;
-    color: #64748b;
+    color: var(--muted);
     font-size: .88rem;
 }
 
 .payments-filter-body {
-    background: #f8fafc;
+    background: var(--surface-soft);
     padding: 18px 22px;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border);
 }
 
 .payments-tabs {
@@ -216,7 +218,7 @@ render_page_start(
     gap: 6px;
     padding: 14px 20px 0;
     overflow-x: auto;
-    border-bottom: 1px solid #e5e7eb;
+    border-bottom: 1px solid var(--border);
 }
 
 .payments-tab {
@@ -225,7 +227,7 @@ render_page_start(
     gap: 7px;
     padding: 10px 13px;
     border-bottom: 3px solid transparent;
-    color: #64748b;
+    color: var(--muted);
     font-size: .88rem;
     font-weight: 700;
     text-decoration: none;
@@ -233,12 +235,12 @@ render_page_start(
 }
 
 .payments-tab:hover {
-    color: #2563eb;
+    color: var(--payments-accent, var(--primary));
 }
 
 .payments-tab.active {
-    color: #2563eb;
-    border-bottom-color: #2563eb;
+    color: var(--payments-accent, var(--primary));
+    border-bottom-color: var(--payments-accent, var(--primary));
 }
 
 .payment-status {
@@ -267,7 +269,7 @@ render_page_start(
 }
 
 .payment-history-label {
-    color: #64748b;
+    color: var(--muted);
     font-size: .8rem;
     font-weight: 600;
 }
@@ -275,7 +277,7 @@ render_page_start(
 .payments-empty {
     padding: 55px 20px;
     text-align: center;
-    color: #64748b;
+    color: var(--muted);
 }
 
 .payments-empty i {
@@ -296,6 +298,45 @@ render_page_start(
 
 }
 
+/* Pair page surfaces and foregrounds in both themes. */
+.payments-kpi-card,
+.payments-filter-card {
+    color: var(--text);
+}
+
+.payments-filter-header h2,
+.payments-filter-body .form-label {
+    color: var(--text);
+}
+
+.payments-tab:hover {
+    background: var(--primary-light);
+}
+
+.payments-tab:focus-visible {
+    outline: 2px solid var(--payments-accent, var(--primary));
+    outline-offset: -3px;
+}
+
+html[data-theme=dark] .payments-kpi-card,
+html[data-theme=dark] .payments-filter-card {
+    --payments-accent: #93c5fd;
+}
+
+html[data-theme=dark] .payment-status-pending {
+    color: #fcd34d;
+    background: #302611;
+}
+
+html[data-theme=dark] .payment-status-paid {
+    color: #6ee7b7;
+    background: #092c24;
+}
+
+html[data-theme=dark] .payment-status-rejected {
+    color: #fca5a5;
+    background: #321820;
+}
 </style>
 
 
@@ -964,13 +1005,7 @@ render_page_start(
 
                             <?php
 
-                            $voucherUrl = app_url(
-                                '/'
-                                . ltrim(
-                                    (string) $p['voucher_path'],
-                                    '/'
-                                )
-                            );
+                            $voucherUrl = VoucherService::url('payment', (int) $p['id']);
 
                             $voucherExtension = strtolower(
                                 pathinfo(
@@ -1057,7 +1092,6 @@ render_page_start(
                                     <button
                                         class="btn btn-sm btn-success"
                                         type="submit"
-                                        data-confirm="¿Deseas aprobar este pago?"
                                     >
 
                                         <i class="bi bi-check-circle me-1"></i>
@@ -1095,7 +1129,6 @@ render_page_start(
                                     <button
                                         class="btn btn-sm btn-outline-danger"
                                         type="submit"
-                                        data-confirm="¿Deseas rechazar este pago?"
                                     >
 
                                         <i class="bi bi-x-circle me-1"></i>
@@ -1299,6 +1332,6 @@ render_page_start(
 
 <?php
 
-render_page_end();
+render_pagination($pageHasNext); render_page_end();
 
 ?>

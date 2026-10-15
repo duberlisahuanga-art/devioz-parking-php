@@ -5,6 +5,7 @@ declare(strict_types=1);
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start([
         'cookie_httponly' => true,
+        'cookie_secure' => AppConfig::production() || ($_SERVER['HTTPS'] ?? '') === 'on',
         'cookie_samesite' => 'Lax',
         'use_strict_mode' => true,
     ]);
@@ -100,6 +101,6 @@ function verify_csrf(?string $token = null): void
 {
     $token ??= $_POST['csrf_token'] ?? null;
     if (!is_string($token) || !hash_equals(csrf_token(), $token)) {
-        throw new RuntimeException('Token CSRF invalido.');
+        throw new ValidationException('Token CSRF invalido.');
     }
 }

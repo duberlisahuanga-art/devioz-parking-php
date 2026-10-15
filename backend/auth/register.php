@@ -23,10 +23,14 @@ try {
     );
 
 } catch (Throwable $e) {
+    if ($e instanceof RateLimitException) {
+        http_response_code(429);
+        exit(htmlspecialchars(public_error_message($e), ENT_QUOTES, 'UTF-8'));
+    }
 
     flash(
         'danger',
-        $e->getMessage()
+        public_error_message($e)
     );
 
     redirect_to(

@@ -44,6 +44,8 @@ render_page_start(
     'espacios'
 );
 ?>
+<p class="small text-secondary" data-live-parking data-live-status role="status">Actualización automática cada 30 segundos.</p>
+<script src="<?= h(app_url('/frontend/assets/js/parking-live.js')) ?>" defer></script>
 
 <!-- =========================================================
      ENCABEZADO
@@ -298,7 +300,16 @@ render_page_start(
 
                         <?php if ($status === 'occupied'): ?>
 
-                            <i class="bi bi-car-front-fill"></i>
+                            <?php if (($space['vehicle_type'] ?? 'car') === 'moto'): ?>
+                                <svg class="vehicle-motorcycle-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                                    <circle cx="5" cy="17" r="4"/>
+                                    <circle cx="19" cy="17" r="4"/>
+                                    <path d="M19 17 15.5 6H12M14 6h3M3 9h5l3 7H5l4-6h6M11 16h3l3-5"/>
+                                    <path d="M9 9h4l2 3h-5z" fill="currentColor" stroke="none"/>
+                                </svg>
+                            <?php else: ?>
+                                <i class="bi bi-car-front-fill" aria-hidden="true"></i>
+                            <?php endif; ?>
 
                         <?php elseif ($status === 'reserved'): ?>
 
@@ -401,7 +412,16 @@ render_page_start(
 
                         <?php if ($status === 'occupied'): ?>
 
-                            <i class="bi bi-car-front-fill"></i>
+                            <?php if (($space['vehicle_type'] ?? 'car') === 'moto'): ?>
+                                <svg class="vehicle-motorcycle-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                                    <circle cx="5" cy="17" r="4"/>
+                                    <circle cx="19" cy="17" r="4"/>
+                                    <path d="M19 17 15.5 6H12M14 6h3M3 9h5l3 7H5l4-6h6M11 16h3l3-5"/>
+                                    <path d="M9 9h4l2 3h-5z" fill="currentColor" stroke="none"/>
+                                </svg>
+                            <?php else: ?>
+                                <i class="bi bi-car-front-fill" aria-hidden="true"></i>
+                            <?php endif; ?>
 
                         <?php elseif ($status === 'reserved'): ?>
 
@@ -504,7 +524,16 @@ render_page_start(
 
                         <?php if ($status === 'occupied'): ?>
 
-                            <i class="bi bi-car-front-fill"></i>
+                            <?php if (($space['vehicle_type'] ?? 'car') === 'moto'): ?>
+                                <svg class="vehicle-motorcycle-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                                    <circle cx="5" cy="17" r="4"/>
+                                    <circle cx="19" cy="17" r="4"/>
+                                    <path d="M19 17 15.5 6H12M14 6h3M3 9h5l3 7H5l4-6h6M11 16h3l3-5"/>
+                                    <path d="M9 9h4l2 3h-5z" fill="currentColor" stroke="none"/>
+                                </svg>
+                            <?php else: ?>
+                                <i class="bi bi-car-front-fill" aria-hidden="true"></i>
+                            <?php endif; ?>
 
                         <?php elseif ($status === 'reserved'): ?>
 

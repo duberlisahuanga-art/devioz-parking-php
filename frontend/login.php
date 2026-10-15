@@ -49,28 +49,24 @@ $flash = consume_flash();
             <form method="post" action="<?= htmlspecialchars(app_url('/backend/auth/login.php'), ENT_QUOTES, 'UTF-8') ?>" class="vstack gap-3">
                 <?= csrf_field() ?>
                 <div>
-                    <label class="form-label">Correo electrónico</label>
+                    <label class="form-label" for="loginEmail">Correo electrónico</label>
                     <div class="input-group input-group-lg">
                         <span class="input-group-text"><i class="bi bi-envelope"></i></span>
-                        <input class="form-control" type="email" name="email" required autocomplete="email" placeholder="correo@ejemplo.com">
+                        <input class="form-control" id="loginEmail" type="email" name="email" required autocomplete="email" placeholder="correo@ejemplo.com">
                     </div>
                 </div>
                 <div>
-                    <label class="form-label">Contraseña</label>
+                    <label class="form-label" for="password">Contraseña</label>
                     <div class="input-group input-group-lg">
                         <span class="input-group-text"><i class="bi bi-lock"></i></span>
                         <input class="form-control" id="password" type="password" name="password" required autocomplete="current-password" placeholder="Tu contraseña">
-                        <button class="btn btn-outline-secondary" type="button" data-toggle-password="#password"><i class="bi bi-eye"></i></button>
+                        <button class="btn btn-outline-secondary" type="button" data-toggle-password="#password" aria-label="Mostrar contraseña"><i class="bi bi-eye"></i></button>
                     </div>
                 </div>
                 <button class="btn btn-primary btn-lg w-100 mt-2" type="submit">Ingresar</button>
             </form>
 
-            <div class="demo-box mt-4">
-                <div class="fw-semibold mb-2">Credenciales de demostración</div>
-                <div class="small"><strong>Admin:</strong> admin@devioz.test / password</div>
-                <div class="small"><strong>Conductor:</strong> driver@devioz.test / password</div>
-            </div>
+
         </div>
     </section>
 </div>

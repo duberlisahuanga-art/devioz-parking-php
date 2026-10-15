@@ -7,6 +7,8 @@ require_once __DIR__ . '/../includes/layout.php';
 require_admin();
 
 $logs = AdminController::audit($_GET);
+$pageHasNext = count($logs) > 50;
+$logs = array_slice($logs,0,50);
 render_page_start('Auditoría', 'auditoria');
 ?>
 <div class="panel-card">
@@ -16,4 +18,4 @@ render_page_start('Auditoría', 'auditoria');
         <?php foreach ($logs as $log): ?><tr><td><?= h(format_datetime($log['created_at'])) ?></td><td><?= h($log['user_name'] ?: 'Sistema') ?><div class="small text-secondary"><?= h($log['user_email'] ?: '') ?></div></td><td><span class="badge text-bg-light border"><?= h($log['action']) ?></span></td><td><?= h(($log['entity_type'] ?: '—') . ($log['entity_id'] ? ' #' . $log['entity_id'] : '')) ?></td><td><?= h($log['description']) ?></td><td><?= h($log['ip_address'] ?: '—') ?></td></tr><?php endforeach; ?>
     </tbody></table></div>
 </div>
-<?php render_page_end(); ?>
+<?php render_pagination($pageHasNext); render_page_end(); ?>

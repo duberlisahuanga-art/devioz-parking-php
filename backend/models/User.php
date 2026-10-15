@@ -4,6 +4,19 @@ declare(strict_types=1);
 
 final class User
 {
+    public static function updateProfile(int $id, string $name, string $email, ?string $phone): void
+    {
+        $stmt = db()->prepare('UPDATE users SET name=:name,email=:email,phone=:phone,updated_at=NOW() WHERE id=:id');
+        $stmt->execute(['id' => $id, 'name' => $name, 'email' => $email, 'phone' => $phone]);
+    }
+
+    public static function changePassword(int $id, string $previousHash, string $newHash): bool
+    {
+        $stmt = db()->prepare('UPDATE users SET password=:new_hash,updated_at=NOW() WHERE id=:id AND password=:previous_hash');
+        $stmt->execute(['id' => $id, 'new_hash' => $newHash, 'previous_hash' => $previousHash]);
+        return $stmt->rowCount() === 1;
+    }
+
     public static function find(int $id): ?array
     {
         $stmt = db()->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
@@ -27,8 +40,9 @@ final class User
         $params = [];
 
         if ($search !== '') {
-            $sql .= ' AND (u.name LIKE :search OR u.email LIKE :search)';
-            $params['search'] = '%' . $search . '%';
+            $sql .= ' AND (u.name LIKE :search1 OR u.email LIKE :search2)';
+            $params['search1'] = '%' . $search . '%';
+            $params['search2'] = '%' . $search . '%';
         }
         if (in_array($role, ['admin', 'driver'], true)) {
             $sql .= ' AND u.role = :role';
@@ -39,7 +53,7 @@ final class User
             $params['status'] = $status;
         }
 
-        $sql .= ' ORDER BY u.created_at DESC, u.id DESC';
+        $sql .= ' ORDER BY u.created_at DESC, u.id DESC LIMIT 51 OFFSET ' . page_offset();
         $stmt = db()->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();

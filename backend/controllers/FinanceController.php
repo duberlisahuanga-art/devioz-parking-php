@@ -94,18 +94,18 @@ final class FinanceController
     {
         $file = $files['voucher'] ?? null;
         if ($file === null || (is_array($file) && ($file['error'] ?? null) === UPLOAD_ERR_NO_FILE)) return null;
-        if (!is_array($file) || ($file['error'] ?? null) !== UPLOAD_ERR_OK) throw new RuntimeException('No se pudo recibir el comprobante. Revisa el límite de subida del servidor.');
+        if (!is_array($file) || ($file['error'] ?? null) !== UPLOAD_ERR_OK) throw new ValidationException('No se pudo recibir el comprobante. Revisa el límite de subida del servidor.');
         $tmp = $file['tmp_name'] ?? '';
-        if (!is_string($tmp) || !is_uploaded_file($tmp)) throw new RuntimeException('Comprobante inválido.');
+        if (!is_string($tmp) || !is_uploaded_file($tmp)) throw new ValidationException('Comprobante inválido.');
         $size = filesize($tmp);
-        if ($size === false || $size <= 0 || $size > 5 * 1024 * 1024) throw new RuntimeException('El comprobante debe tener como máximo 5 MB.');
+        if ($size === false || $size <= 0 || $size > 5 * 1024 * 1024) throw new ValidationException('El comprobante debe tener como máximo 5 MB.');
         $mime = (new finfo(FILEINFO_MIME_TYPE))->file($tmp);
         $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp', 'application/pdf' => 'pdf'];
-        if (!isset($allowed[$mime])) throw new RuntimeException('Solo se permiten JPG, PNG, WEBP o PDF.');
+        if (!isset($allowed[$mime])) throw new ValidationException('Solo se permiten JPG, PNG, WEBP o PDF.');
         $dir = __DIR__ . '/../uploads/egresos';
-        if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) throw new RuntimeException('No se pudo crear la carpeta de comprobantes.');
+        if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) throw new ValidationException('No se pudo crear la carpeta de comprobantes.');
         $name = 'egreso_' . time() . '_' . bin2hex(random_bytes(16)) . '.' . $allowed[$mime];
-        if (!move_uploaded_file($tmp, $dir . '/' . $name)) throw new RuntimeException('No se pudo guardar el comprobante.');
+        if (!move_uploaded_file($tmp, $dir . '/' . $name)) throw new ValidationException('No se pudo guardar el comprobante.');
         return 'backend/uploads/egresos/' . $name;
     }
 
@@ -132,7 +132,7 @@ final class FinanceController
             if ($id !== null) {
                 $lock = $pdo->prepare('SELECT id FROM expenses WHERE id=:id FOR UPDATE');
                 $lock->execute(['id' => $id]);
-                if (!$lock->fetch()) throw new RuntimeException('El egreso no existe.');
+                if (!$lock->fetch()) throw new ValidationException('El egreso no existe.');
                 $old = Expense::find($id);
             }
             $newPath = self::upload($files);
@@ -157,6 +157,13 @@ final class FinanceController
     public static function voucherUrl(?string $path): ?string
     {
         if (!$path || !preg_match('#^backend/uploads/(?:egresos|comprobantes)/[A-Za-z0-9_-]+\.(?:jpe?g|png|webp|pdf)$#D', $path)) return null;
-        return app_url('/' . $path);
+        require_auth();
+        foreach (['payments' => 'payment', 'expenses' => 'expense'] as $table => $type) {
+            $query = db()->prepare('SELECT id FROM ' . $table . ' WHERE voucher_path=:path LIMIT 1');
+            $query->execute(['path' => $path]);
+            $id = $query->fetchColumn();
+            if ($id !== false) return VoucherService::url($type, (int) $id);
+        }
+        return null;
     }
 }

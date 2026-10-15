@@ -1405,7 +1405,7 @@ if (voucherModal) {
         |--------------------------------------------------------------------------
         | Validar archivo antes de enviar
         |--------------------------------------------------------------------------
-        */
+            */
 
         if (voucherInput) {
 
@@ -1949,7 +1949,7 @@ if (adminSpaces.length > 0) {
 if (spaceStatus === 'available') {
 
     if (spaceAvailableMessage) {
-        
+
         spaceAvailableMessage
             .classList
             .remove('d-none');
@@ -2539,5 +2539,128 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 1000);
         window.addEventListener('pagehide', () => { clearInterval(clockTimer); destroyPlayers(); }, { once: true });
         renderGrid();
+    });
+});
+
+/* Account settings and the shared notification center. */
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('[data-settings-module]').forEach((root) => {
+        const buttons = Array.from(root.querySelectorAll('[data-settings-tab]'));
+        const show = (name, focus = false) => {
+            buttons.forEach((button) => {
+                const selected = button.dataset.settingsTab === name;
+                button.setAttribute('aria-selected', String(selected));
+                button.tabIndex = selected ? 0 : -1;
+                if (selected && focus) button.focus();
+            });
+            root.querySelectorAll('[data-settings-panel]').forEach((panel) => { panel.hidden = panel.dataset.settingsPanel !== name; });
+        };
+        buttons.forEach((button, index) => {
+            button.addEventListener('click', () => show(button.dataset.settingsTab));
+            button.addEventListener('keydown', (event) => {
+                let target;
+                if (['ArrowRight', 'ArrowDown'].includes(event.key)) target = (index + 1) % buttons.length;
+                if (['ArrowLeft', 'ArrowUp'].includes(event.key)) target = (index + buttons.length - 1) % buttons.length;
+                if (event.key === 'Home') target = 0;
+                if (event.key === 'End') target = buttons.length - 1;
+                if (target !== undefined) { event.preventDefault(); show(buttons[target].dataset.settingsTab, true); }
+            });
+        });
+        root.querySelectorAll('[data-settings-phone]').forEach((input) => input.addEventListener('input', () => {
+            input.value = input.value.replace(/[^0-9]/g, '').slice(0, 9);
+        }));
+    });
+    document.querySelectorAll('[data-notification-center]').forEach((root) => {
+        const toggle = root.querySelector('[data-notification-toggle]');
+        const panel = root.querySelector('[data-notification-panel]');
+        const list = root.querySelector('[data-notification-list]');
+        const dot = root.querySelector('[data-notification-dot]');
+        const feedback = root.querySelector('[data-notification-feedback]');
+        const markAll = root.querySelector('[data-notification-mark-all]');
+        const clearRead = root.querySelector('[data-notification-clear-read]');
+        let loading = false;
+        let unreadCount = 0;
+        let readCount = 0;
+        const updateActions = () => {
+            markAll.disabled = loading || unreadCount === 0;
+            clearRead.disabled = loading || readCount === 0;
+        };
+        const node = (tag, text, className = '') => {
+            const item = document.createElement(tag);
+            item.textContent = text;
+            item.className = className;
+            return item;
+        };
+        const safeUrl = (path) => {
+            try {
+                const url = new URL(path, location.origin);
+                return url.origin === location.origin && url.pathname.startsWith('/devioz-parking-php/frontend/') ? url.href : null;
+            } catch { return null; }
+        };
+        const render = (data) => {
+            list.replaceChildren();
+            dot.hidden = Number(data.unread_count) === 0;
+            unreadCount = Number(data.unread_count);
+            readCount = Number(data.read_count);
+            updateActions();
+            if (!data.items.length) list.append(node('p', 'No tienes notificaciones.', 'notification-empty'));
+            data.items.forEach((notice) => {
+                const item = node('article', '', 'notification-item');
+                item.classList.toggle('is-unread', Number(notice.is_read) === 0);
+                const icon = node('i', '', 'bi ' + ({ reservations: 'bi-calendar-check', payments: 'bi-credit-card', pending_actions: 'bi-clock-history', system_notices: 'bi-shield-check' }[notice.type] || 'bi-bell'));
+                icon.setAttribute('aria-hidden', 'true');
+                const content = node('div', '', 'notification-content');
+                content.append(node('strong', notice.title), node('p', notice.message));
+                const date = new Date(notice.created_at.replace(' ', 'T'));
+                const time = node('time', Number.isNaN(date.getTime()) ? notice.created_at : date.toLocaleString('es-PE'));
+                content.append(time);
+                if (notice.action_url) {
+                    const url = safeUrl(notice.action_url);
+                    if (url) { const link = node('a', 'Ver detalle'); link.href = url; content.append(link); }
+                }
+                if (Number(notice.is_read) === 0) {
+                    const mark = node('button', 'Marcar como leído');
+                    mark.type = 'button';
+                    mark.addEventListener('click', () => request('mark_read', notice.id));
+                    content.append(mark);
+                }
+                item.append(icon, content);
+                list.append(item);
+            });
+        };
+        const request = async (action, id) => {
+            if (loading) return;
+            loading = true;
+            updateActions();
+            feedback.textContent = action ? 'Guardando…' : 'Cargando…';
+            try {
+                const options = { credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' } };
+                if (action) {
+                    options.method = 'POST';
+                    options.body = new URLSearchParams({ action, csrf_token: root.dataset.csrf });
+                    if (id) options.body.set('notification_id', id);
+                }
+                const response = await fetch(root.dataset.endpoint, options);
+                if (!response.ok || !response.headers.get('content-type')?.includes('application/json')) throw new Error('response');
+                const data = await response.json();
+                render(data);
+                feedback.textContent = action === 'clear_read'
+                    ? `Se eliminaron ${Number(data.deleted_count)} notificaciones leídas. Las no leídas se conservan.`
+                    : (action ? 'Estado actualizado.' : '');
+            } catch { feedback.textContent = 'No se pudieron actualizar las notificaciones. Vuelve a abrir la campana para reintentar.'; }
+            finally { loading = false; updateActions(); }
+        };
+        const close = (focus = false) => { panel.hidden = true; toggle.setAttribute('aria-expanded', 'false'); if (focus) toggle.focus(); };
+        toggle.addEventListener('click', () => {
+            const open = panel.hidden;
+            panel.hidden = !open;
+            toggle.setAttribute('aria-expanded', String(open));
+            if (open) request();
+        });
+        document.addEventListener('click', (event) => { if (!root.contains(event.target)) close(); });
+        document.addEventListener('keydown', (event) => { if (event.key === 'Escape' && !panel.hidden) close(true); });
+        markAll.addEventListener('click', () => request('mark_all'));
+        clearRead.addEventListener('click', () => request('clear_read'));
+        request();
     });
 });

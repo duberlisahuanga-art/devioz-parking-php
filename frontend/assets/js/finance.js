@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!movement || !movement.voucher_url) return;
         const target = document.getElementById('financeVoucherContent');
         target.replaceChildren();
-        const pdf = /\.pdf$/i.test(movement.voucher_url);
+        const pdf = /\.pdf$/i.test(movement.voucher_path || "");
         const element = document.createElement(pdf ? 'iframe' : 'img');
         element.src = movement.voucher_url;
         element.className = pdf ? 'finance-voucher-pdf' : 'finance-voucher-image';

@@ -2,9 +2,21 @@
 
 declare(strict_types=1);
 
+require_once __DIR__ . '/config/app.php';
+require_once __DIR__ . '/support.php';
+$composerAutoload = dirname(__DIR__) . '/vendor/autoload.php';
+if (is_file($composerAutoload)) {
+    require_once $composerAutoload;
+}
 require_once __DIR__ . '/config/conexion.php';
+set_exception_handler(function (Throwable $error): void {
+    if (http_response_code() < 400) {
+        http_response_code(500);
+    }
+    echo htmlspecialchars(public_error_message($error), ENT_QUOTES, 'UTF-8');
+});
 
-const APP_BASE_URL = '/devioz-parking-php';
+define('APP_BASE_URL', rtrim(AppConfig::get('APP_BASE_URL', '/devioz-parking-php'), '/'));
 const MONTHLY_PRICE = 100.00;
 
 function db(): PDO
@@ -71,7 +83,9 @@ function normalize_plate(string $plate): string
 
 function validate_peruvian_plate(string $plate): bool
 {
-    return preg_match('/^[A-Z]{3}-?\d{3}$/', strtoupper(trim($plate))) === 1;
+    // Application input policy: at most 7 characters including an optional separator.
+    $plate = strtoupper(trim($plate));
+    return strlen($plate) <= 7 && preg_match('/^[A-Z0-9]+(?:-[A-Z0-9]+)?$/D', $plate) === 1;
 }
 
 function clean_string(mixed $value, int $max = 255): string
@@ -84,7 +98,9 @@ require_once __DIR__ . '/models/User.php';
 require_once __DIR__ . '/models/Parking.php';
 require_once __DIR__ . '/models/Space.php';
 require_once __DIR__ . '/models/Vehicle.php';
+require_once __DIR__ . '/models/VehicleCatalog.php';
 require_once __DIR__ . '/models/Reservation.php';
+require_once __DIR__ . '/models/ReservationFilters.php';
 require_once __DIR__ . '/models/Payment.php';
 require_once __DIR__ . '/models/Camera.php';
 require_once __DIR__ . '/models/AuditLog.php';
@@ -93,6 +109,8 @@ require_once __DIR__ . '/auth/session.php';
 require_once __DIR__ . '/auth/permissions.php';
 
 require_once __DIR__ . '/services/AuditService.php';
+require_once __DIR__ . '/services/RateLimiter.php';
+require_once __DIR__ . '/services/VoucherService.php';
 
 require_once __DIR__ . '/controllers/AuthController.php';
 require_once __DIR__ . '/controllers/VehicleController.php';
@@ -103,3 +121,10 @@ require_once __DIR__ . '/controllers/AdminController.php';
 
 require_once __DIR__ . '/models/Expense.php';
 require_once __DIR__ . '/controllers/FinanceController.php';
+
+require_once __DIR__ . '/models/UserPreference.php';
+require_once __DIR__ . '/models/Notification.php';
+require_once __DIR__ . '/services/NotificationService.php';
+require_once __DIR__ . '/controllers/SettingsController.php';
+require_once __DIR__ . '/controllers/NotificationController.php';
+require_once __DIR__ . '/services/ReservationLifecycleService.php';

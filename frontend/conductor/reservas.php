@@ -16,6 +16,11 @@ require_driver();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $formAction = (string) ($_POST['form_action'] ?? '');
+    if ($formAction === 'renew') {
+        run_post_action(function (): void {
+            ReservationController::renew((int) ($_POST['reservation_id'] ?? 0));
+        }, 'Nueva mensualidad creada. Envía su pago para habilitar el ingreso.', '/frontend/conductor/reservas.php');
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -77,11 +82,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $reservations = ReservationController::index();
 
+$pageHasNext = count($reservations) > 50;
+$reservations = array_slice($reservations,0,50);
 render_page_start(
     'Mis reservas',
     'reservas'
 );
 ?>
+<nav class="d-flex flex-wrap gap-2 mb-3" aria-label="Estado de las reservas">
+    <a class="btn btn-outline-primary" href="?view=current" <?= ($_GET['view'] ?? '') !== 'history' ? 'aria-current="page"' : '' ?>>En curso</a>
+    <a class="btn btn-outline-primary" href="?view=history" <?= ($_GET['view'] ?? '') === 'history' ? 'aria-current="page"' : '' ?>>Historial y renovación</a>
+</nav>
+<p class="small text-secondary">Las mensualidades finalizadas se conservan en el historial. Desde allí puedes renovar la misma plaza si está disponible; cada renovación requiere un nuevo pago aprobado.</p>
 
 <!-- =========================================================
      ENCABEZADO
@@ -234,6 +246,10 @@ render_page_start(
                         status_label(
                             $reservationStatus
                         );
+                    if ($reservationStatus === 'expired') $statusText = 'Mensualidad finalizada';
+                    if ($reservationStatus === 'active' && $r['ends_on'] < ReservationController::today()) {
+                        $statusText = 'Mensualidad vencida · Pendiente de salida';
+                    }
 
                     $cancellationText = '';
 
@@ -520,6 +536,18 @@ render_page_start(
 
                                     </span>
 
+                                <?php elseif ($reservationStatus === 'expired'): ?>
+                                    <?php if (!empty($r['renewal_id'])): ?>
+                                        <a class="btn btn-sm btn-outline-primary" href="?view=<?= in_array($r['renewal_status'], ['expired', 'cancelled'], true) ? 'history' : 'current' ?>">Ver renovación #<?= h($r['renewal_id']) ?></a>
+                                    <?php else: ?>
+                                    <form method="post">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="form_action" value="renew">
+                                        <input type="hidden" name="reservation_id" value="<?= h($reservationId) ?>">
+                                        <button class="btn btn-sm btn-primary" type="submit">Renovar mensualidad</button>
+                                    </form>
+                                    <span class="small text-secondary">Nueva mensualidad desde hoy, con la misma plaza y vehículo si está disponible.</span>
+                                    <?php endif; ?>
                                 <?php elseif (
                                     $cancellationStatus === 'approved'
                                     || $reservationStatus === 'cancelled'
@@ -789,8 +817,8 @@ render_page_start(
                         <div class="payment-qr-wrap">
 
                             <img
-                                src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=DEVIOZ-PARKING-YAPE"
-                                alt="Código QR para pago Yape"
+                                src="<?= h(app_url('/frontend/assets/img/payments/yape_qr_oficial.png')) ?>"
+                                alt="QR oficial de Yape para pagos"
                                 class="payment-qr-image"
                             >
 
@@ -808,7 +836,7 @@ render_page_start(
 
                     </div>
 
-                    <!-- NÚMERO DE OPERACIÓN -->
+                    <!-- CÓDIGO DE SEGURIDAD -->
 
                     <div class="payment-field">
 
@@ -817,7 +845,7 @@ render_page_start(
                             class="form-label"
                         >
 
-                            N.º de operación
+                            Código de seguridad
 
                         </label>
 
@@ -826,8 +854,11 @@ render_page_start(
                             class="form-control"
                             id="paymentOperation"
                             name="provider_tx_id"
-                            maxlength="100"
-                            placeholder="Ej. 123456789"
+                            inputmode="numeric"
+                            maxlength="3"
+                            pattern="[0-9]{3}"
+                            title="El código de seguridad debe contener exactamente 3 dígitos numéricos."
+                            placeholder="Ej. 123"
                             autocomplete="off"
                             required
                         >
@@ -886,65 +917,10 @@ render_page_start(
 
                         </div>
 
-                        <div class="payment-method-option disabled">
 
-                            <span>
-                                Plin
-                            </span>
 
-                            <strong>
-                                Próximamente
-                            </strong>
 
-                        </div>
 
-                        <div class="payment-method-option disabled">
-
-                            <span>
-                                Tarjeta BCP
-                            </span>
-
-                            <strong>
-                                Próximamente
-                            </strong>
-
-                        </div>
-
-                        <div class="payment-method-option disabled">
-
-                            <span>
-                                Tarjeta BBVA
-                            </span>
-
-                            <strong>
-                                Próximamente
-                            </strong>
-
-                        </div>
-
-                        <div class="payment-method-option disabled">
-
-                            <span>
-                                Tarjeta Interbank
-                            </span>
-
-                            <strong>
-                                Próximamente
-                            </strong>
-
-                        </div>
-
-                        <div class="payment-method-option disabled">
-
-                            <span>
-                                Otra tarjeta
-                            </span>
-
-                            <strong>
-                                Próximamente
-                            </strong>
-
-                        </div>
 
                     </div>
 
@@ -1004,6 +980,6 @@ render_page_start(
 
 <?php
 
-render_page_end();
+render_pagination($pageHasNext); render_page_end();
 
 ?>

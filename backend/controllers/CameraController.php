@@ -51,36 +51,36 @@ final class CameraController
     {
         $result = [];
         foreach (['name' => 150, 'coverage' => 255, 'location' => 150, 'rtsp_path' => 255, 'stream_url' => 500] as $field => $limit) {
-            if (isset($data[$field]) && !is_string($data[$field])) throw new RuntimeException('Formato de texto inválido.');
+            if (isset($data[$field]) && !is_string($data[$field])) throw new ValidationException('Formato de texto inválido.');
             $value = trim($data[$field] ?? '');
-            if (mb_strlen($value) > $limit) throw new RuntimeException("El campo {$field} supera {$limit} caracteres.");
+            if (mb_strlen($value) > $limit) throw new ValidationException("El campo {$field} supera {$limit} caracteres.");
             $result[$field] = $value === '' && $field !== 'name' ? null : $value;
         }
-        if ($result['name'] === '') throw new RuntimeException('El nombre de la cámara es obligatorio.');
+        if ($result['name'] === '') throw new ValidationException('El nombre de la cámara es obligatorio.');
         $parking = filter_var($data['parking_id'] ?? null, FILTER_VALIDATE_INT);
-        if (!$parking || !Parking::find($parking)) throw new RuntimeException('Estacionamiento inválido.');
+        if (!$parking || !Parking::find($parking)) throw new ValidationException('Estacionamiento inválido.');
         $result['parking_id'] = $parking;
         foreach (['channel_number' => [1, 4], 'brightness' => [0, 200], 'contrast' => [0, 200], 'saturation' => [0, 200]] as $field => [$min, $max]) {
             $value = filter_var($data[$field] ?? null, FILTER_VALIDATE_INT);
-            if ($value === false || $value === null || $value < $min || $value > $max) throw new RuntimeException("Valor inválido para {$field}.");
+            if ($value === false || $value < $min || $value > $max) throw new ValidationException("Valor inválido para {$field}.");
             $result[$field] = $value;
         }
         foreach (['status' => ['active', 'inactive'], 'stream_protocol' => ['hls', 'webrtc'], 'preferred_quality' => ['sub', 'main']] as $field => $allowed) {
-            if (!in_array($data[$field] ?? null, $allowed, true)) throw new RuntimeException("Valor inválido para {$field}.");
+            if (!in_array($data[$field] ?? null, $allowed, true)) throw new ValidationException("Valor inválido para {$field}.");
             $result[$field] = $data[$field];
         }
         foreach (['osd_datetime', 'osd_camera_name'] as $field) {
             $value = $data[$field] ?? '0';
-            if (!in_array($value, ['0', '1', 0, 1], true)) throw new RuntimeException('Valor OSD inválido.');
+            if (!in_array($value, ['0', '1', 0, 1], true)) throw new ValidationException('Valor OSD inválido.');
             $result[$field] = (int) $value;
         }
-        if (!self::safeWebEndpoint($result['stream_url'] ?? '')) throw new RuntimeException('Utiliza un endpoint HTTP/HTTPS sin credenciales.');
-        if (!self::safeRtspPath($result['rtsp_path'] ?? '')) throw new RuntimeException('Ruta interna inválida. Usa /Streaming/Channels/X01 o X02.');
+        if (!self::safeWebEndpoint($result['stream_url'] ?? '')) throw new ValidationException('Utiliza un endpoint HTTP/HTTPS sin credenciales.');
+        if (!self::safeRtspPath($result['rtsp_path'] ?? '')) throw new ValidationException('Ruta interna inválida. Usa /Streaming/Channels/X01 o X02.');
         if ($result['rtsp_path'] !== null && (int) substr($result['rtsp_path'], -3, 1) !== $result['channel_number']) {
-            throw new RuntimeException('La ruta interna debe corresponder al canal físico.');
+            throw new ValidationException('La ruta interna debe corresponder al canal físico.');
         }
         $existing = Camera::findByChannel($parking, $result['channel_number']);
-        if ($existing && (int) $existing['id'] !== $cameraId) throw new RuntimeException('Ese canal ya está configurado en el estacionamiento.');
+        if ($existing && (int) $existing['id'] !== $cameraId) throw new ValidationException('Ese canal ya está configurado en el estacionamiento.');
         return $result;
     }
 
@@ -95,7 +95,7 @@ final class CameraController
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) $pdo->rollBack();
             if ($e instanceof PDOException) {
-                throw new RuntimeException($e->getCode() === '23000' ? 'El canal ya está ocupado o la operación tiene referencias asociadas.' : 'No se pudo guardar la cámara.');
+                throw new ValidationException($e->getCode() === '23000' ? 'El canal ya está ocupado o la operación tiene referencias asociadas.' : 'No se pudo guardar la cámara.');
             }
             throw $e;
         }
@@ -116,7 +116,7 @@ final class CameraController
     {
         require_admin();
         $camera = Camera::find($cameraId);
-        if (!$camera) throw new RuntimeException('Cámara no encontrada.');
+        if (!$camera) throw new ValidationException('Cámara no encontrada.');
         $values = self::validate($data, $cameraId);
         self::persist(function () use ($cameraId, $values): void {
             Camera::update($cameraId, $values);
@@ -128,7 +128,7 @@ final class CameraController
     {
         require_admin();
         $camera = Camera::find($cameraId);
-        if (!$camera) throw new RuntimeException('Cámara no encontrada.');
+        if (!$camera) throw new ValidationException('Cámara no encontrada.');
         self::persist(function () use ($cameraId, $camera): void {
             Camera::delete($cameraId);
             AuditService::log('Camaras', 'Eliminada', 'Cámara eliminada.', 'Camera', $cameraId, $camera['name']);

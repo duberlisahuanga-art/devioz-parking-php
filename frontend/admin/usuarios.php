@@ -9,6 +9,8 @@ require_admin();
 $data = AdminController::users($_GET);
 $users = $data['users'];
 $summary = $data['summary'];
+$pageHasNext = count($users) > 50;
+$users = array_slice($users,0,50);
 render_page_start('Usuarios', 'usuarios');
 ?>
 <div class="row g-3 mb-4">
@@ -23,4 +25,4 @@ render_page_start('Usuarios', 'usuarios');
         <?php foreach ($users as $u): ?><tr><td><strong><?= h($u['name']) ?></strong><div class="small text-secondary"><?= h($u['email']) ?></div></td><td><span class="badge text-bg-primary"><?= h($u['role']==='admin'?'Administrador':'Conductor') ?></span></td><td><span class="badge <?= h(badge_class($u['status'])) ?>"><?= h(status_label($u['status'])) ?></span></td><td><?= h($u['phone'] ?: '—') ?></td><td><?= h($u['vehicles_count']) ?></td><td><?= h($u['reservations_count']) ?></td><td><?= h(format_datetime($u['created_at'])) ?></td></tr><?php endforeach; ?>
     </tbody></table></div>
 </div>
-<?php render_page_end(); ?>
+<?php render_pagination($pageHasNext); render_page_end(); ?>

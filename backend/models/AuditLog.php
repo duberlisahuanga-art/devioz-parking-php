@@ -36,11 +36,13 @@ final class AuditLog
             $params['action'] = $action;
         }
         if ($search !== '') {
-            $sql .= ' AND (a.description LIKE :search OR u.name LIKE :search OR u.email LIKE :search)';
-            $params['search'] = '%' . $search . '%';
+            $sql .= ' AND (a.description LIKE :search1 OR u.name LIKE :search2 OR u.email LIKE :search3)';
+            $params['search1'] = '%' . $search . '%';
+            $params['search2'] = '%' . $search . '%';
+            $params['search3'] = '%' . $search . '%';
         }
 
-        $sql .= ' ORDER BY a.created_at DESC, a.id DESC';
+        $sql .= ' ORDER BY a.created_at DESC, a.id DESC LIMIT 51 OFFSET ' . page_offset();
         $stmt = db()->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll();

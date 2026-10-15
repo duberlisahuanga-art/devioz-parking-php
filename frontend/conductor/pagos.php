@@ -90,8 +90,8 @@ $stmt = db()->prepare(
 
     WHERE r.user_id = :user_id
 
-    ORDER BY py.created_at DESC
-    "
+    ORDER BY py.created_at DESC, py.id DESC
+    LIMIT 51 OFFSET " . page_offset()
 );
 
 $stmt->execute([
@@ -100,6 +100,8 @@ $stmt->execute([
 
 $payments =
     $stmt->fetchAll();
+$pageHasNext = count($payments) > 50;
+$payments = array_slice($payments, 0, 50);
 
 /*
 |--------------------------------------------------------------------------
@@ -136,6 +138,20 @@ foreach ($payments as $payment) {
         $rejectedPayments++;
     }
 }
+
+$totalsQuery = db()->prepare("SELECT COUNT(*) AS total,
+    COALESCE(SUM(py.status='pending'),0) AS pending,
+    COALESCE(SUM(py.status='paid'),0) AS paid,
+    COALESCE(SUM(py.status='rejected'),0) AS rejected,
+    COALESCE(SUM(CASE WHEN py.status='paid' THEN py.amount ELSE 0 END),0) AS paid_amount
+    FROM payments py JOIN reservations r ON r.id=py.reservation_id WHERE r.user_id=:id");
+$totalsQuery->execute(['id' => $userId]);
+$totals = $totalsQuery->fetch();
+$totalPayments = (int) $totals['total'];
+$pendingPayments = (int) $totals['pending'];
+$paidPayments = (int) $totals['paid'];
+$rejectedPayments = (int) $totals['rejected'];
+$totalPaid = (float) $totals['paid_amount'];
 
 /*
 |--------------------------------------------------------------------------
@@ -548,13 +564,7 @@ render_page_start(
 
                                         
 <?php
-$voucherUrl = app_url(
-    '/'
-    . ltrim(
-        (string) $p['voucher_path'],
-        '/'
-    )
-);
+$voucherUrl = VoucherService::url('payment', (int) $p['id']);
 
 $voucherExtension = strtolower(
     pathinfo(
@@ -736,6 +746,6 @@ $voucherExtension = strtolower(
 </div>
 <?php
 
-render_page_end();
+render_pagination($pageHasNext); render_page_end();
 
 ?>

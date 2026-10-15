@@ -1,0 +1,26 @@
+# Plantilla: adaptar dominio, rutas y certificados antes de habilitar.
+# Estas directivas globales deben ir en la configuración del servidor, no .htaccess.
+ServerTokens Prod
+ServerSignature Off
+
+<VirtualHost *:80>
+    ServerName parking.example.com
+    Redirect permanent / https://parking.example.com/
+</VirtualHost>
+
+<VirtualHost *:443>
+    ServerName parking.example.com
+    DocumentRoot "/srv/devioz-parking-php"
+    SSLEngine on
+    SSLProtocol -all +TLSv1.2 +TLSv1.3
+    SSLCertificateFile "/etc/ssl/devioz/fullchain.pem"
+    SSLCertificateKeyFile "/etc/ssl/devioz/privkey.pem"
+    <Directory "/srv/devioz-parking-php">
+        AllowOverride FileInfo Options AuthConfig
+        Require all granted
+        Options -Indexes
+    </Directory>
+    # Inyectar APP_ENV=production, APP_BASE_URL vacío y credenciales en el
+    # servicio/entorno de PHP o configuración privada del servidor.
+    # No guardar secretos en esta plantilla ni confiar en cabeceras HTTPS del cliente.
+</VirtualHost>

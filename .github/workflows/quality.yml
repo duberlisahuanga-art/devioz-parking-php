@@ -1,0 +1,49 @@
+name: Calidad DEVIOZ
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: ci_test_only
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    env:
+      TEST_DB_HOST: 127.0.0.1
+      TEST_DB_USERNAME: root
+      TEST_DB_PASSWORD: ci_test_only
+      PHP_BIN: php
+      APP_SECRET: ci-synthetic-secret-012345678901234567890123456789
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: pdo_mysql, mbstring, fileinfo, dom
+          tools: composer
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: composer install --no-interaction --prefer-dist
+      - run: composer validate --strict
+      - run: composer quality
+      - run: composer test
+      - run: composer analyse
+      - run: composer style
+      - run: composer audit
+      - run: php tests/integration.php
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
+      - run: php tools/browser-fixture.php create
+      - run: php tests/concurrency.php
+      - run: npm run test:e2e
+      - name: Limpiar fixture
+        if: always()
+        run: php tools/browser-fixture.php clean

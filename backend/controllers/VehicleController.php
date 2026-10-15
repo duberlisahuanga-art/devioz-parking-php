@@ -14,25 +14,37 @@ final class VehicleController
     {
         $user = require_driver();
 
-        $rawPlate = clean_string($data['plate'] ?? '', 20);
+        $rawPlate = is_string($data['plate'] ?? null) ? trim($data['plate']) : '';
         if (!validate_peruvian_plate($rawPlate)) {
-            throw new RuntimeException('Formato de placa peruana invalido. Ejemplo: ABC-123.');
+            throw new ValidationException(
+                'Placa inválida: usa letras y números, con un guion opcional y máximo 7 caracteres.'
+            );
         }
 
         $plate = normalize_plate($rawPlate);
         if (Vehicle::plateExists($plate)) {
-            throw new RuntimeException('La placa ya se encuentra registrada.');
+            throw new ValidationException('La placa ya se encuentra registrada.');
         }
 
         $type = (string) ($data['type'] ?? 'car');
         if (!in_array($type, ['car', 'moto'], true)) {
-            throw new RuntimeException('Tipo de vehiculo invalido.');
+            throw new ValidationException('Tipo de vehiculo invalido.');
+        }
+
+        $brand = clean_string($data['brand'] ?? '', 100);
+        $model = clean_string($data['model'] ?? '', 100);
+        if ($brand === '' || $model === '') {
+            throw new ValidationException('Completa la marca y el modelo del vehículo.');
+        }
+        $selection = ['brand' => $brand, 'model' => $model];
+        if ($type === 'car') {
+            $selection = VehicleCatalog::validateSelection($brand, $model, ($data['catalog_manual'] ?? '') === '1');
         }
 
         $id = Vehicle::create((int) $user['id'], [
             'plate' => $plate,
-            'brand' => clean_string($data['brand'] ?? '', 100),
-            'model' => clean_string($data['model'] ?? '', 100),
+            'brand' => $selection['brand'],
+            'model' => $selection['model'],
             'color' => clean_string($data['color'] ?? '', 50),
             'type' => $type,
         ]);
@@ -46,10 +58,10 @@ final class VehicleController
         $user = require_driver();
         $vehicle = Vehicle::findOwned($vehicleId, (int) $user['id']);
         if (!$vehicle) {
-            throw new RuntimeException('Vehiculo no encontrado.');
+            throw new ValidationException('Vehiculo no encontrado.');
         }
         if (Vehicle::hasOpenReservation($vehicleId)) {
-            throw new RuntimeException('No puedes eliminar un vehiculo con una reserva vigente.');
+            throw new ValidationException('No puedes eliminar un vehiculo con una reserva vigente.');
         }
 
         Vehicle::delete($vehicleId);

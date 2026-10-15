@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 final class Space
 {
+    public static function filterOptions(): array
+    {
+        return db()->query('SELECT s.id, s.code, p.name AS parking_name FROM spaces s
+            JOIN parkings p ON p.id=s.parking_id ORDER BY s.code, s.id')->fetchAll();
+    }
+
     public static function find(int $id): ?array
     {
         $stmt = db()->prepare('SELECT * FROM spaces WHERE id = :id LIMIT 1');
@@ -47,7 +53,8 @@ final class Space
             v.plate AS vehicle_plate,
             v.brand AS vehicle_brand,
             v.model AS vehicle_model,
-            v.color AS vehicle_color
+            v.color AS vehicle_color,
+            v.type AS vehicle_type
 
         FROM spaces s
 

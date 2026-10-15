@@ -1,0 +1,10 @@
+parameters:
+    level: 5
+    paths:
+        - backend
+    excludePaths:
+        - backend/controllers/AdminController.backup.php
+        - backend/config/local.php
+    scanFiles:
+        - backend/bootstrap.php
+    tmpDir: .phpstan-cache

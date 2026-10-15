@@ -403,6 +403,8 @@ function render_page_start(
 
     <meta charset="utf-8">
 
+    <script src="<?= h(app_url('/frontend/assets/js/theme.js') . '?v=' . filemtime(__DIR__ . '/../assets/js/theme.js')) ?>"></script>
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1"
@@ -433,7 +435,7 @@ function render_page_start(
     <link
         href="<?= h(
             app_url(
-                '/frontend/assets/css/styles.css'
+                '/frontend/assets/css/styles.css?v=' . filemtime(__DIR__ . '/../assets/css/styles.css')
             )
         ) ?>"
         rel="stylesheet"
@@ -564,6 +566,11 @@ function render_page_start(
         <!-- Pie sidebar -->
         <div class="sidebar-footer">
 
+            <a class="nav-item sidebar-settings-link <?= $active === 'configuracion' ? 'active' : '' ?>" href="<?= h(app_url('/frontend/configuracion.php')) ?>" title="Configuración" aria-label="Configuración" <?= $active === 'configuracion' ? 'aria-current="page"' : '' ?>>
+                <span class="nav-icon"><i class="bi bi-gear"></i></span>
+                <span class="nav-item-content"><span class="nav-title">Configuración</span></span>
+            </a>
+
             <div class="sidebar-session">
 
                 <div class="sidebar-session-icon">
@@ -588,23 +595,7 @@ function render_page_start(
 
             </div>
 
-            <a
-                class="btn btn-sidebar-logout"
-                aria-label="Cerrar sesión"
-                title="Cerrar sesión"
-                href="<?= h(
-                    app_url(
-                        '/frontend/logout.php'
-                    )
-                ) ?>">
-
-                <i class="bi bi-box-arrow-right"></i>
-
-                <span>
-                    Cerrar sesión
-                </span>
-
-            </a>
+            <form method="post" action="<?= h(app_url('/backend/auth/logout.php')) ?>"><?= csrf_field() ?><button type="submit" class="btn btn-sidebar-logout" aria-label="Cerrar sesión"><i class="bi bi-box-arrow-right" aria-hidden="true"></i><span>Cerrar sesión</span></button></form>
 
         </div>
 
@@ -664,6 +655,16 @@ function render_page_start(
             </div>
 
             <div class="topbar-actions">
+
+                <div class="notification-center" data-notification-center data-endpoint="<?= h(app_url('/frontend/notificaciones.php')) ?>" data-csrf="<?= h(csrf_token()) ?>">
+                    <button type="button" class="topbar-icon-btn" data-notification-toggle aria-label="Notificaciones" title="Notificaciones" aria-expanded="false" aria-controls="notification-panel"><i class="bi bi-bell" aria-hidden="true"></i><span class="notification-dot" data-notification-dot <?= Notification::unreadCount((int) $user['id']) > 0 ? '' : 'hidden' ?>></span></button>
+                    <section class="notification-panel" id="notification-panel" data-notification-panel aria-label="Centro de notificaciones" hidden>
+                        <header><strong>Notificaciones</strong><div class="notification-actions"><button type="button" data-notification-mark-all disabled>Marcar todo como leído</button><button type="button" data-notification-clear-read title="Eliminar únicamente las notificaciones leídas" disabled><i class="bi bi-trash" aria-hidden="true"></i> Borrar historial</button></div></header>
+                        <div class="notification-list" data-notification-list></div>
+                        <p class="notification-feedback" role="status" aria-live="polite" data-notification-feedback></p>
+                    </section>
+                </div>
+                <button type="button" class="topbar-icon-btn" data-theme-toggle aria-label="Cambiar tema" title="Cambiar tema"><i class="bi bi-sun-fill" aria-hidden="true"></i></button>
 
                 <!-- Usuario -->
                 <div class="topbar-user">
@@ -745,7 +746,7 @@ function render_page_end(): void
 <script
     src="<?= h(
         app_url(
-            '/frontend/assets/js/app.js'
+            '/frontend/assets/js/app.js?v=' . filemtime(__DIR__ . '/../assets/js/app.js')
         )
     ) ?>">
 </script>
@@ -755,6 +756,23 @@ function render_page_end(): void
 </html>
 
     <?php
+}
+
+function render_pagination(bool $hasNext): void
+{
+    $page = intdiv(page_offset(), 50) + 1;
+    $parameters = array_filter($_GET, static fn($value): bool => is_scalar($value));
+    echo '<nav class="d-flex align-items-center gap-3 my-3" aria-label="Paginación">';
+    if ($page > 1) {
+        $parameters['page'] = $page - 1;
+        echo '<a class="btn btn-outline-primary" href="?' . h(http_build_query($parameters)) . '">Anterior</a>';
+    }
+    echo '<span>Página ' . $page . '</span>';
+    if ($hasNext) {
+        $parameters['page'] = $page + 1;
+        echo '<a class="btn btn-outline-primary" href="?' . h(http_build_query($parameters)) . '">Siguiente</a>';
+    }
+    echo '</nav>';
 }
 
 /*
@@ -784,7 +802,7 @@ function run_post_action(
 
         flash(
             'danger',
-            $e->getMessage()
+            public_error_message($e)
         );
     }
 

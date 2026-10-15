@@ -4,24 +4,10 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../backend/bootstrap.php';
 
-/*
-|--------------------------------------------------------------------------
-| Usuario autenticado
-|--------------------------------------------------------------------------
-|
-| El landing solo se muestra a visitantes.
-| Si ya existe una sesión, enviamos al usuario a su panel.
-|
-*/
-
-if (is_authenticated()) {
-
-    if (is_admin()) {
-        redirect_to('/frontend/admin/dashboard.php');
-    }
-
-    redirect_to('/frontend/conductor/dashboard.php');
-}
+$authenticated = is_authenticated();
+$panelUrl = htmlspecialchars(app_url(is_admin()
+    ? '/frontend/admin/dashboard.php'
+    : '/frontend/conductor/dashboard.php'), ENT_QUOTES, 'UTF-8');
 
 /*
 |--------------------------------------------------------------------------
@@ -70,7 +56,7 @@ $authMode = (
     <!-- CSS global -->
     <link
         href="<?= htmlspecialchars(
-            app_url('/frontend/assets/css/styles.css'),
+                app_url('/frontend/assets/css/styles.css?v=' . filemtime(__DIR__ . '/assets/css/styles.css')),
             ENT_QUOTES,
             'UTF-8'
         ) ?>"
@@ -80,18 +66,18 @@ $authMode = (
     <style>
 
         :root {
-            --landing-bg: #070c18;
-            --landing-panel: #101c38;
-            --landing-border: #1c2c4d;
-            --landing-text: #eaf1fb;
-            --landing-muted: #94a3b8;
+            --landing-bg: var(--background);
+            --landing-panel: var(--surface);
+            --landing-border: #e5e7eb;
+            --landing-text: #172033;
+            --landing-muted: var(--muted);
             --landing-muted-2: #64748b;
 
-            --landing-gold: #ffb020;
-            --landing-gold-dark: #c98a12;
+            --landing-primary: var(--primary);
+            --landing-primary-dark: var(--primary-dark);
 
-            --landing-cyan: #3ddcff;
-            --landing-green: #2ee59d;
+            --landing-accent: var(--primary);
+            --landing-green: var(--success);
         }
 
 
@@ -127,12 +113,12 @@ $authMode = (
             background:
                 radial-gradient(
                     circle at 20% 15%,
-                    rgba(61, 220, 255, 0.08),
+                    rgba(37,99,235, 0.08),
                     transparent 28%
                 ),
                 radial-gradient(
                     circle at 80% 12%,
-                    rgba(255, 176, 32, 0.08),
+                    rgba(37,99,235, 0.08),
                     transparent 24%
                 ),
                 var(--landing-bg);
@@ -168,7 +154,7 @@ $authMode = (
 
 
         .landing-navbar.scrolled {
-            background: rgba(7, 12, 24, 0.86);
+            background: rgba(255,255,255,.96);
 
             backdrop-filter: blur(18px);
             -webkit-backdrop-filter: blur(18px);
@@ -201,7 +187,7 @@ $authMode = (
 
             text-decoration: none;
 
-            color: #ffffff;
+            color: var(--landing-text);
 
             font-size: .9rem;
             font-weight: 900;
@@ -211,7 +197,7 @@ $authMode = (
 
 
         .landing-brand:hover {
-            color: #ffffff;
+            color: var(--landing-text);
         }
 
 
@@ -224,17 +210,17 @@ $authMode = (
 
             border-radius: 10px;
 
-            color: #1a1200;
+            color: var(--landing-text);
 
             background:
                 linear-gradient(
                     135deg,
-                    var(--landing-gold),
-                    var(--landing-gold-dark)
+                    var(--landing-primary),
+                    var(--landing-primary-dark)
                 );
 
             box-shadow:
-                0 10px 28px rgba(255, 176, 32, .2);
+                0 10px 28px rgba(37,99,235, .2);
         }
 
 
@@ -248,7 +234,7 @@ $authMode = (
 
 
         .landing-nav-links a {
-            color: #a8b3c7;
+            color: var(--landing-muted);
 
             text-decoration: none;
 
@@ -264,7 +250,7 @@ $authMode = (
 
 
         .landing-nav-links a:hover {
-            color: var(--landing-gold);
+            color: var(--landing-primary);
         }
 
 
@@ -296,30 +282,30 @@ $authMode = (
         .btn-auth-link {
             padding: 10px 12px;
 
-            color: #d2d9e5;
+            color: var(--landing-muted);
 
             background: transparent;
         }
 
 
         .btn-auth-link:hover {
-            color: var(--landing-gold);
+            color: var(--landing-primary);
         }
 
 
         .btn-auth-primary {
             padding: 10px 19px;
 
-            color: #1a1200;
+            color: var(--landing-text);
 
-            background: var(--landing-gold);
+            background: var(--landing-primary);
         }
 
 
         .btn-auth-primary:hover {
-            color: #1a1200;
+            color: var(--landing-text);
 
-            background: var(--landing-gold-dark);
+            background: var(--landing-primary-dark);
 
             transform: translateY(-1px);
         }
@@ -332,7 +318,7 @@ $authMode = (
 
             background: transparent;
 
-            color: #cbd5e1;
+            color: var(--landing-muted);
 
             font-size: 1.45rem;
         }
@@ -345,7 +331,7 @@ $authMode = (
                 1px solid var(--landing-border);
 
             background:
-                rgba(7, 12, 24, .97);
+                rgba(255,255,255,.98);
 
             backdrop-filter: blur(16px);
         }
@@ -373,7 +359,7 @@ $authMode = (
         .landing-mobile-menu a {
             padding: 8px 0;
 
-            color: #a8b3c7;
+            color: var(--landing-muted);
 
             text-decoration: none;
 
@@ -419,7 +405,7 @@ $authMode = (
             overflow: hidden;
 
             background:
-                #070c18;
+                var(--landing-bg);
         }
 
 
@@ -457,7 +443,7 @@ $authMode = (
 
                 radial-gradient(
                     circle at 22% 16%,
-                    rgba(61, 220, 255, .12),
+                    rgba(37,99,235, .12),
                     transparent 24%
                 ),
 
@@ -518,7 +504,7 @@ $authMode = (
         .landing-eyebrow {
             margin-bottom: 22px;
 
-            color: var(--landing-gold);
+            color: var(--landing-primary);
 
             font-size: .78rem;
             font-weight: 800;
@@ -532,7 +518,7 @@ $authMode = (
         .landing-hero h1 {
             margin: 0;
 
-            color: #ffffff;
+            color: var(--landing-text);
 
             font-size:
                 clamp(3rem, 8vw, 6.8rem);
@@ -545,12 +531,12 @@ $authMode = (
 
             text-shadow:
                 0 0 45px
-                rgba(255, 176, 32, .11);
+                rgba(37,99,235, .11);
         }
 
 
         .landing-hero h1 span {
-            color: var(--landing-gold);
+            color: var(--landing-primary);
         }
 
 
@@ -560,7 +546,7 @@ $authMode = (
             margin:
                 28px auto 8px;
 
-            color: #cbd5e1;
+            color: var(--landing-muted);
 
             font-size:
                 clamp(1rem, 2vw, 1.2rem);
@@ -570,7 +556,7 @@ $authMode = (
         .landing-hero-meta {
             margin: 0;
 
-            color: var(--landing-cyan);
+            color: var(--landing-accent);
 
             font-size: .82rem;
             font-weight: 700;
@@ -620,24 +606,24 @@ $authMode = (
 
 
         .landing-cta-primary {
-            color: #1a1200;
+            color: var(--landing-text);
 
             background:
-                var(--landing-gold);
+                var(--landing-primary);
 
             border:
-                1px solid var(--landing-gold);
+                1px solid var(--landing-primary);
         }
 
 
         .landing-cta-primary:hover {
-            color: #1a1200;
+            color: var(--landing-text);
 
             background:
-                var(--landing-gold-dark);
+                var(--landing-primary-dark);
 
             border-color:
-                var(--landing-gold-dark);
+                var(--landing-primary-dark);
 
             transform:
                 translateY(-2px);
@@ -645,7 +631,7 @@ $authMode = (
 
 
         .landing-cta-secondary {
-            color: #cbd5e1;
+            color: var(--landing-muted);
 
             border:
                 1px solid #475569;
@@ -657,10 +643,10 @@ $authMode = (
 
         .landing-cta-secondary:hover {
             color:
-                var(--landing-gold);
+                var(--landing-primary);
 
             border-color:
-                var(--landing-gold);
+                var(--landing-primary);
 
             transform:
                 translateY(-2px);
@@ -696,7 +682,7 @@ $authMode = (
                 linear-gradient(
                     90deg,
                     transparent,
-                    var(--landing-gold),
+                    var(--landing-primary),
                     transparent
                 );
         }
@@ -722,7 +708,7 @@ $authMode = (
             background:
                 linear-gradient(
                     90deg,
-                    var(--landing-gold),
+                    var(--landing-primary),
                     transparent
                 );
         }
@@ -732,7 +718,7 @@ $authMode = (
         .landing-two-col h2 {
             margin-bottom: 18px;
 
-            color: #ffffff;
+            color: var(--landing-text);
 
             font-size:
                 clamp(2rem, 4vw, 3rem);
@@ -772,7 +758,7 @@ $authMode = (
 
         .landing-highlight {
             color:
-                var(--landing-gold);
+                var(--landing-primary);
 
             font-weight: 800;
         }
@@ -791,7 +777,7 @@ $authMode = (
             border-radius: 22px;
 
             background:
-                rgba(11, 18, 34, .7);
+                var(--landing-panel);
 
             box-shadow:
                 0 28px 70px rgba(0, 0, 0, .18);
@@ -855,7 +841,7 @@ $authMode = (
             background:
                 linear-gradient(
                     to bottom,
-                    var(--landing-gold),
+                    var(--landing-primary),
                     var(--landing-border),
                     transparent
                 );
@@ -891,7 +877,7 @@ $authMode = (
             border-radius: 18px;
 
             background:
-                rgba(16, 28, 56, .45);
+                var(--landing-panel);
         }
 
 
@@ -919,7 +905,7 @@ $authMode = (
             gap: 8px;
 
             color:
-                var(--landing-gold);
+                var(--landing-primary);
 
             font-size: .78rem;
             font-weight: 800;
@@ -931,7 +917,7 @@ $authMode = (
 
 
         .landing-step-card h3 {
-            color: #ffffff;
+            color: var(--landing-text);
 
             font-size: 1.25rem;
             font-weight: 800;
@@ -978,7 +964,7 @@ $authMode = (
             border-radius: 20px;
 
             background:
-                rgba(16, 28, 56, .38);
+                var(--landing-panel);
 
             transition:
                 transform .25s ease,
@@ -992,7 +978,7 @@ $authMode = (
                 translateY(-5px);
 
             border-color:
-                rgba(255, 176, 32, .35);
+                rgba(37,99,235, .35);
 
             box-shadow:
                 0 22px 45px
@@ -1012,10 +998,10 @@ $authMode = (
             border-radius: 14px;
 
             color:
-                var(--landing-gold);
+                var(--landing-primary);
 
             background:
-                rgba(255, 176, 32, .10);
+                rgba(37,99,235, .10);
 
             font-size: 1.35rem;
         }
@@ -1024,10 +1010,10 @@ $authMode = (
         .landing-feature-card:nth-child(2)
         .landing-feature-icon {
             color:
-                var(--landing-cyan);
+                var(--landing-accent);
 
             background:
-                rgba(61, 220, 255, .10);
+                rgba(37,99,235, .10);
         }
 
 
@@ -1042,7 +1028,7 @@ $authMode = (
 
 
         .landing-feature-card h3 {
-            color: #ffffff;
+            color: var(--landing-text);
 
             font-size: 1.15rem;
             font-weight: 800;
@@ -1090,7 +1076,7 @@ $authMode = (
             border-radius: 22px;
 
             background:
-                rgba(16, 28, 56, .42);
+                var(--landing-panel);
 
             box-shadow:
                 0 22px 40px rgba(2, 6, 23, .18);
@@ -1121,7 +1107,7 @@ $authMode = (
                 var(--landing-border);
 
             background:
-                #101c38;
+                var(--landing-panel);
         }
 
 
@@ -1188,7 +1174,7 @@ $authMode = (
             margin-bottom: 12px;
 
             color:
-                var(--landing-cyan);
+                var(--landing-accent);
 
             font-size: 2.2rem;
         }
@@ -1197,7 +1183,7 @@ $authMode = (
         .landing-camera-overlay strong {
             display: block;
 
-            color: #ffffff;
+            color: var(--landing-text);
 
             font-size:
                 clamp(1.4rem, 2vw, 1.9rem);
@@ -1213,7 +1199,7 @@ $authMode = (
 
             margin-top: 8px;
 
-            color: #d1d5db;
+            color: var(--landing-muted);
 
             line-height: 1.6;
         }
@@ -1231,7 +1217,7 @@ $authMode = (
         .landing-security-copy h2 {
             margin-bottom: 18px;
 
-            color: #ffffff;
+            color: var(--landing-text);
 
             font-size: 2.2rem;
             font-weight: 900;
@@ -1262,7 +1248,7 @@ $authMode = (
 
             gap: 10px;
 
-            color: #cbd5e1;
+            color: var(--landing-muted);
 
             font-size: .92rem;
         }
@@ -1296,7 +1282,7 @@ $authMode = (
             border-radius: 22px;
 
             background:
-                rgba(16, 28, 56, .35);
+                var(--landing-panel);
         }
 
 
@@ -1311,7 +1297,7 @@ $authMode = (
 
         .landing-project-card h3 {
             color:
-                var(--landing-gold);
+                var(--landing-primary);
 
             font-size: 1.5rem;
             font-weight: 900;
@@ -1346,21 +1332,21 @@ $authMode = (
 
                 radial-gradient(
                     circle at 50% 30%,
-                    rgba(255, 176, 32, .12),
+                    rgba(37,99,235, .12),
                     transparent 34%
                 ),
 
                 linear-gradient(
                     to bottom,
                     var(--landing-bg),
-                    #0b1326,
+                    #eff6ff,
                     var(--landing-bg)
                 );
         }
 
 
         .landing-final-cta h2 {
-            color: #ffffff;
+            color: var(--landing-text);
 
             font-size:
                 clamp(2.2rem, 5vw, 4rem);
@@ -1373,7 +1359,7 @@ $authMode = (
 
         .landing-final-cta h2 span {
             color:
-                var(--landing-gold);
+                var(--landing-primary);
         }
 
 
@@ -1439,7 +1425,7 @@ $authMode = (
 
         .landing-footer a:hover {
             color:
-                var(--landing-gold);
+                var(--landing-primary);
         }
 
 
@@ -1518,7 +1504,7 @@ $authMode = (
             border-radius: 22px;
 
             background:
-                #101c38;
+                var(--landing-panel);
 
             box-shadow:
                 0 30px 90px
@@ -1556,7 +1542,7 @@ $authMode = (
 
             border-radius: 999px;
 
-            color: #94a3b8;
+            color: var(--landing-muted);
 
             background:
                 transparent;
@@ -1571,10 +1557,10 @@ $authMode = (
 
 
         .landing-auth-tab.active {
-            color: #1a1200;
+            color: var(--landing-text);
 
             background:
-                var(--landing-gold);
+                var(--landing-primary);
         }
 
 
@@ -1584,7 +1570,7 @@ $authMode = (
             background:
                 transparent;
 
-            color: #94a3b8;
+            color: var(--landing-muted);
 
             font-size: 1.25rem;
         }
@@ -1602,7 +1588,7 @@ $authMode = (
 
 
         .landing-auth-intro h2 {
-            color: #ffffff;
+            color: var(--landing-text);
 
             font-size: 1.55rem;
             font-weight: 900;
@@ -1630,7 +1616,7 @@ $authMode = (
 
 
         .landing-auth-form .form-label {
-            color: #aab6c8;
+            color: var(--landing-muted);
 
             font-size: .78rem;
             font-weight: 700;
@@ -1647,9 +1633,9 @@ $authMode = (
             border-radius: 12px;
 
             background:
-                #070c18;
+                var(--landing-bg);
 
-            color: #ffffff;
+            color: var(--landing-text);
         }
 
 
@@ -1662,11 +1648,11 @@ $authMode = (
         .landing-auth-form
         .form-control:focus {
             border-color:
-                var(--landing-gold);
+                var(--landing-primary);
 
             box-shadow:
                 0 0 0 .2rem
-                rgba(255, 176, 32, .1);
+                rgba(37,99,235, .1);
         }
 
 
@@ -1674,22 +1660,22 @@ $authMode = (
             border-color:
                 var(--landing-border);
 
-            color: #94a3b8;
+            color: var(--landing-muted);
 
             background:
-                #070c18;
+                var(--landing-bg);
         }
 
 
         .landing-password-button:hover {
             color:
-                var(--landing-gold);
+                var(--landing-primary);
 
             background:
-                #0b1326;
+                #eff6ff;
 
             border-color:
-                var(--landing-gold);
+                var(--landing-primary);
         }
 
 
@@ -1702,10 +1688,10 @@ $authMode = (
 
             border-radius: 999px;
 
-            color: #1a1200;
+            color: var(--landing-text);
 
             background:
-                var(--landing-gold);
+                var(--landing-primary);
 
             font-weight: 800;
         }
@@ -1713,7 +1699,7 @@ $authMode = (
 
         .landing-auth-submit:hover {
             background:
-                var(--landing-gold-dark);
+                var(--landing-primary-dark);
         }
 
 
@@ -1850,6 +1836,27 @@ $authMode = (
 
         }
 
+        /* Superficies y acciones alineadas con la paleta azul del sistema. */
+        :is(.landing-brand-mark,.btn-auth-primary,.landing-cta-primary,
+            .landing-auth-tab.active,.landing-auth-submit) { color: #fff; }
+        :is(.btn-auth-primary,.landing-cta-primary):hover { color: #fff; }
+        .landing-auth-form .form-control { background: #fff; color: var(--text); }
+        .landing-password-button { background: #fff; color: var(--muted); }
+        .landing-auth-form .form-control::placeholder { color: var(--muted); }
+        .landing-auth-card { box-shadow: 0 18px 50px rgba(15,23,42,.16); }
+        .landing-auth-modal { background: rgba(15,23,42,.55); }
+        .landing-hero { background: var(--navy); }
+        .landing-hero h1 { color: #fff; text-shadow: none; }
+        .landing-hero h1 span { color: #93c5fd; }
+        .landing-hero :is(.landing-hero-subtitle,.landing-hero-meta) { color: #e2e8f0; }
+        .landing-hero .landing-eyebrow { color: #bfdbfe; }
+        .landing-hero .landing-cta-secondary { color: #fff; border-color: #cbd5e1; }
+        .landing-hero .landing-cta-secondary:hover { color: #fff; background: var(--primary); border-color: var(--primary); }
+        .landing-camera-overlay strong { color: #fff; }
+        .landing-camera-overlay span { color: #e2e8f0; }
+        .landing-camera-overlay i { color: #93c5fd; }
+        .landing-navbar:not(.scrolled) { background: rgba(255,255,255,.96); }
+        .landing-footer { background: #eff6ff; }
     </style>
 
 </head>
@@ -1908,6 +1915,10 @@ $authMode = (
 
             <div class="landing-auth-actions">
 
+                <?php if ($authenticated): ?>
+                    <a class="btn-auth-primary" href="<?= $panelUrl ?>">Ir a mi panel</a>
+                <?php else: ?>
+
                 <button
                     type="button"
                     class="btn-auth-link js-open-auth"
@@ -1924,6 +1935,8 @@ $authMode = (
                 >
                     Crear cuenta
                 </button>
+
+                <?php endif; ?>
 
             </div>
 
@@ -1970,6 +1983,10 @@ $authMode = (
 
                 <div class="landing-mobile-auth">
 
+                    <?php if ($authenticated): ?>
+                        <a class="btn-auth-primary" href="<?= $panelUrl ?>">Ir a mi panel</a>
+                    <?php else: ?>
+
                     <button
                         type="button"
                         class="btn-auth-link text-start js-open-auth"
@@ -1986,6 +2003,8 @@ $authMode = (
                     >
                         Crear cuenta
                     </button>
+
+                    <?php endif; ?>
 
                 </div>
 
@@ -2064,13 +2083,17 @@ $authMode = (
                 </a>
 
 
-                <button
-                    type="button"
-                    class="landing-cta-secondary js-open-auth"
-                    data-auth-mode="register"
-                >
-                    Crear cuenta
-                </button>
+                <?php if ($authenticated): ?>
+                    <a class="landing-cta-secondary" href="<?= $panelUrl ?>">Ir a mi panel</a>
+                <?php else: ?>
+                    <button
+                        type="button"
+                        class="landing-cta-secondary js-open-auth"
+                        data-auth-mode="register"
+                    >
+                        Crear cuenta
+                    </button>
+                <?php endif; ?>
 
             </div>
 
@@ -2690,6 +2713,9 @@ $authMode = (
                 <div class="landing-hero-actions">
 
 
+                    <?php if ($authenticated): ?>
+                        <a class="landing-cta-primary" href="<?= $panelUrl ?>">Ir a mi panel</a>
+                    <?php else: ?>
                     <button
                         type="button"
                         class="landing-cta-primary js-open-auth"
@@ -2706,6 +2732,8 @@ $authMode = (
                     >
                         Iniciar sesión
                     </button>
+
+                    <?php endif; ?>
 
 
                 </div>
@@ -2768,7 +2796,7 @@ $authMode = (
 
 <div
     class="landing-auth-modal <?= $flash ? 'open' : '' ?>"
-    id="authModal"
+    id="authModal" role="dialog" aria-modal="true" aria-label="Acceso a Devioz Parking"
     aria-hidden="<?= $flash ? 'false' : 'true' ?>"
 >
 
@@ -2892,7 +2920,7 @@ $authMode = (
 
                     <div>
 
-                        <label class="form-label">
+                        <label class="form-label" for="landingLoginEmail">
 
                             Correo electrónico
 
@@ -2901,7 +2929,7 @@ $authMode = (
 
                         <input
                             class="form-control"
-                            type="email"
+                            id="landingLoginEmail" type="email"
                             name="email"
                             required
                             autocomplete="email"
@@ -2915,7 +2943,7 @@ $authMode = (
 
                     <div>
 
-                        <label class="form-label">
+                        <label class="form-label" for="landingLoginPassword">
 
                             Contraseña
 
@@ -3013,14 +3041,14 @@ $authMode = (
 
                     <div>
 
-                        <label class="form-label">
+                        <label class="form-label" for="landingRegisterName">
                             Nombre
                         </label>
 
 
                         <input
                             class="form-control"
-                            type="text"
+                            id="landingRegisterName" type="text"
                             name="name"
                             required
                             autocomplete="name"
@@ -3034,14 +3062,14 @@ $authMode = (
 
                     <div>
 
-                        <label class="form-label">
+                        <label class="form-label" for="landingRegisterEmail">
                             Correo electrónico
                         </label>
 
 
                         <input
                             class="form-control"
-                            type="email"
+                            id="landingRegisterEmail" type="email"
                             name="email"
                             required
                             autocomplete="email"
@@ -3055,7 +3083,7 @@ $authMode = (
 
                     <div>
 
-                        <label class="form-label">
+                        <label class="form-label" for="landingRegisterPassword">
                             Contraseña
                         </label>
 
@@ -3094,7 +3122,7 @@ $authMode = (
 
                     <div>
 
-                        <label class="form-label">
+                        <label class="form-label" for="landingRegisterPasswordConfirmation">
 
                             Confirmar contraseña
 
@@ -3353,7 +3381,18 @@ document.addEventListener(
         |--------------------------------------------------------------------------
         */
 
+        document.addEventListener('keydown', (event) => {
+            if (event.key !== 'Tab' || !authModal?.classList.contains('open')) return;
+            const nodes = [...authModal.querySelectorAll('button, input, a[href]')].filter(node => !node.disabled && node.offsetParent !== null && node.type !== 'hidden');
+            const first = nodes[0], last = nodes[nodes.length - 1];
+            if (event.shiftKey && (document.activeElement === first || !authModal.contains(document.activeElement))) { event.preventDefault(); last?.focus(); }
+            else if (!event.shiftKey && (document.activeElement === last || !authModal.contains(document.activeElement))) { event.preventDefault(); first?.focus(); }
+        });
+        let authTrigger = null;
         function openAuth(mode) {
+            if (<?= $authenticated ? 'true' : 'false' ?>) return;
+            authTrigger = document.activeElement;
+            document.querySelector('.landing-page')?.setAttribute('inert', '');
 
 
             if (!authModal) {
@@ -3361,9 +3400,8 @@ document.addEventListener(
             }
 
 
-            changeAuthMode(
-                mode || 'login'
-            );
+            changeAuthMode(mode || 'login');
+            requestAnimationFrame(() => authModal.querySelector('.landing-auth-form.active input:not([type=hidden])')?.focus());
 
 
             authModal
@@ -3402,6 +3440,8 @@ document.addEventListener(
         */
 
         function closeAuth() {
+            document.querySelector('.landing-page')?.removeAttribute('inert');
+            authTrigger?.focus();
 
 
             if (!authModal) {

@@ -19,6 +19,10 @@ try {
 
     redirect_to('/frontend/conductor/dashboard.php');
 } catch (Throwable $e) {
-    flash('danger', $e->getMessage());
+    if ($e instanceof RateLimitException) {
+        http_response_code(429);
+        exit(htmlspecialchars(public_error_message($e), ENT_QUOTES, 'UTF-8'));
+    }
+    flash('danger', public_error_message($e));
     redirect_to('/frontend/login.php');
 }

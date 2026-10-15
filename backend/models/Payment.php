@@ -167,17 +167,23 @@ final class Payment
         if ($search !== '') {
             $sql .= "
                 AND (
-                    u.name LIKE :search
-                    OR u.email LIKE :search
-                    OR v.plate LIKE :search
-                    OR s.code LIKE :search
-                    OR py.provider_tx_id LIKE :search
-                    OR CAST(py.id AS CHAR) LIKE :search
-                    OR CAST(py.reservation_id AS CHAR) LIKE :search
+                    u.name LIKE :search1
+                    OR u.email LIKE :search2
+                    OR v.plate LIKE :search3
+                    OR s.code LIKE :search4
+                    OR py.provider_tx_id LIKE :search5
+                    OR CAST(py.id AS CHAR) LIKE :search6
+                    OR CAST(py.reservation_id AS CHAR) LIKE :search7
                 )
             ";
 
-            $params['search'] = '%' . $search . '%';
+            $params['search1'] = '%' . $search . '%';
+            $params['search2'] = '%' . $search . '%';
+            $params['search3'] = '%' . $search . '%';
+            $params['search4'] = '%' . $search . '%';
+            $params['search5'] = '%' . $search . '%';
+            $params['search6'] = '%' . $search . '%';
+            $params['search7'] = '%' . $search . '%';
         }
 
         $sql .= "
@@ -186,6 +192,7 @@ final class Payment
                 py.id DESC
         ";
 
+        if (str_contains($sql, 'FROM payments py') && str_contains($sql, 'WHERE 1 = 1')) $sql .= ' LIMIT 51 OFFSET ' . page_offset();
         $stmt = db()->prepare($sql);
 
         $stmt->execute($params);
@@ -342,13 +349,16 @@ final class Payment
             'UPDATE payments
              SET status = :status,
                  updated_at = NOW()
-             WHERE id = :id'
+             WHERE id = :id AND status = \'pending\''
         );
 
         $stmt->execute([
             'status' => $status,
             'id' => $id,
         ]);
+        if ($stmt->rowCount() !== 1) {
+            throw new ValidationException('El pago ya fue procesado.');
+        }
     }
 
 
@@ -389,6 +399,7 @@ final class Payment
             $sql .= ' AND COALESCE(updated_at,created_at)>=:start';
             $params['start'] = $start;
         }
+        if (str_contains($sql, 'FROM payments py') && str_contains($sql, 'WHERE 1 = 1')) $sql .= ' LIMIT 51 OFFSET ' . page_offset();
         $stmt = db()->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetch();

@@ -40,6 +40,7 @@ final class AdminController
     public static function spaces(): array
     {
         require_admin();
+        ReservationLifecycleService::run();
         return [
             'spaces' => Space::allDetailed(),
             'summary' => Space::stats(),

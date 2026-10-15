@@ -9,7 +9,7 @@ $error = null;
 try {
     $filters = FinanceController::filters($_GET);
 } catch (InvalidArgumentException $e) {
-    $error = $e->getMessage();
+    $error = public_error_message($e);
     $filters = FinanceController::filters([]);
 }
 $query = array_intersect_key($filters, array_flip(['month', 'type', 'category', 'search']));
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         flash('success', $action === 'create_expense' ? 'Egreso registrado.' : 'Egreso actualizado.');
         redirect_to($return);
     } catch (Throwable $e) {
-        $error = $e instanceof PDOException ? 'No se pudo guardar el egreso. Revisa la migración y la conexión.' : $e->getMessage();
+        $error = $e instanceof PDOException ? 'No se pudo guardar el egreso. Revisa la migración y la conexión.' : public_error_message($e);
         foreach (['category', 'concept', 'amount', 'expense_datetime', 'payment_method', 'description', 'other_detail', 'expense_id', 'action'] as $key) {
             $formData[$key] = is_string($_POST[$key] ?? null) ? $_POST[$key] : '';
         }
@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 try {
     $overview = FinanceController::overview($query);
 } catch (PDOException $e) {
-    error_log('Finanzas: ' . $e->getMessage());
+    error_log('Finanzas: ' . public_error_message($e));
     render_page_start('Finanzas', 'finanzas');
     echo '<div class="alert alert-danger">No se pudo cargar Finanzas. Verifica la conexión y ejecuta la migración database/finance_expenses.sql.</div>';
     render_page_end();
@@ -69,7 +69,7 @@ if (($_GET['export'] ?? '') === 'csv' && $error === null) {
     exit;
 }
 $movements = $overview['movements'];
-foreach ($movements as &$movement) $movement['voucher_url'] = FinanceController::voucherUrl($movement['voucher_path'] ?? null);
+foreach ($movements as &$movement) $movement['voucher_url'] = !empty($movement['voucher_path']) ? VoucherService::url($movement['type'] === 'income' ? 'payment' : 'expense', (int) $movement['reference_id']) : null;
 unset($movement);
 render_page_start('Finanzas', 'finanzas');
 ?>

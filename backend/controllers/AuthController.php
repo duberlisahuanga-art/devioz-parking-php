@@ -10,16 +10,19 @@ final class AuthController
         $password = (string) ($data['password'] ?? '');
 
         if ($email === '' || $password === '') {
-            throw new RuntimeException('Ingresa tu correo y contrasena.');
+            throw new ValidationException('Ingresa tu correo y contrasena.');
         }
 
+        validate_password($password);
+        RateLimiter::consume('login-ip:' . request_ip(), 30);
+        RateLimiter::consume('login-account-ip:' . request_ip() . ':' . $email);
         $user = User::findByEmail($email);
         if (!$user || !password_verify($password, (string) $user['password'])) {
-            throw new RuntimeException('Correo o contrasena incorrectos.');
+            throw new ValidationException('Correo o contrasena incorrectos.');
         }
 
         if (($user['status'] ?? 'inactive') !== 'active') {
-            throw new RuntimeException('Tu cuenta se encuentra inactiva.');
+            throw new ValidationException('Tu cuenta se encuentra inactiva.');
         }
 
         session_regenerate_id(true);
@@ -42,25 +45,23 @@ final class AuthController
     $passwordConfirmation = (string) ($data['password_confirmation'] ?? '');
 
     if ($name === '') {
-        throw new RuntimeException('Ingresa tu nombre.');
+        throw new ValidationException('Ingresa tu nombre.');
     }
 
     if ($email === '' || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        throw new RuntimeException('Ingresa un correo válido.');
+        throw new ValidationException('Ingresa un correo válido.');
     }
 
+    RateLimiter::consume('register-ip:' . request_ip(), 10, 3600);
+    if (mb_strlen($name) > 150 || strlen($email) > 150) throw new ValidationException('Nombre o correo demasiado largo.');
     if (User::findByEmail($email)) {
-        throw new RuntimeException('El correo ya se encuentra registrado.');
+        throw new ValidationException('El correo ya se encuentra registrado.');
     }
 
-    if (strlen($password) < 8) {
-        throw new RuntimeException(
-            'La contraseña debe tener al menos 8 caracteres.'
-        );
-    }
+    validate_password($password);
 
     if ($password !== $passwordConfirmation) {
-        throw new RuntimeException(
+        throw new ValidationException(
             'Las contraseñas no coinciden.'
         );
     }

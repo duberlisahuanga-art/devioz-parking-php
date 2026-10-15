@@ -1,0 +1,15 @@
+Options -Indexes
+RewriteEngine On
+RewriteRule (^|/)\. - [F,L]
+RewriteRule ^(?:database|docs|deploy|tests|tools|vendor|node_modules|test-results|playwright-report)(?:/|$) - [F,L,NC]
+RewriteRule ^backend/(?!auth/(?:login|register|logout)\.php$) - [F,L,NC]
+RewriteRule ^(?:AGENTS\.md|composer\.(?:json|lock)|package(?:-lock)?\.json|phpstan.*|phpunit.*|.*\.(?:sql|sh|log|bak|backup))$ - [F,L,NC]
+<IfModule mod_headers.c>
+ Header unset X-Content-Type-Options
+ Header unset X-Frame-Options
+ Header unset Referrer-Policy
+ Header always set X-Content-Type-Options "nosniff"
+ Header always set X-Frame-Options "SAMEORIGIN"
+ Header always set Referrer-Policy "strict-origin-when-cross-origin"
+ Header unset X-Powered-By
+</IfModule>

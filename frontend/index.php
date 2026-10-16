@@ -2987,7 +2987,7 @@ $authMode = (
                         Ingresar
 
                     </button>
-
+                    <a href="<?= htmlspecialchars(app_url('/frontend/recuperar-password.php'), ENT_QUOTES, 'UTF-8') ?>">Olvidé mi contraseña</a>
 
                 </form>
 

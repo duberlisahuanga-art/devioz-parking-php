@@ -70,8 +70,7 @@ final class AdminController
     {
         require_admin();
         return AuditLog::all(
-            trim((string) ($filters['action'] ?? '')),
-            trim((string) ($filters['search'] ?? ''))
+            filters: $filters
         );
     }
 

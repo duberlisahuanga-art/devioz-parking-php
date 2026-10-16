@@ -37,7 +37,11 @@ $reservationsMax = max(1, ...array_column($months, 'reservations'));
 $expiring = db()->prepare("SELECT COUNT(*) FROM reservations WHERE status IN ('active','confirmed') AND ends_on >= :today AND ends_on <= :end");
 $expiring->execute(['today' => $today->format('Y-m-d'), 'end' => $today->modify('+7 days')->format('Y-m-d')]);
 $expiringCount = (int) $expiring->fetchColumn();
-$activity = db()->query("SELECT a.action, a.description, a.created_at, u.name AS user_name FROM audit_logs a LEFT JOIN users u ON u.id = a.user_id ORDER BY a.created_at DESC, a.id DESC LIMIT 6")->fetchAll();
+$activity = db()->query("SELECT a.action, a.description, a.created_at,
+    CASE WHEN JSON_CONTAINS_PATH(IF(JSON_VALID(a.metadata), a.metadata, '{}'), 'one', '$.actor')
+        THEN COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(a.metadata, '$.actor.name')), 'null'), 'Sistema / no autenticado')
+        ELSE 'Identidad histórica no disponible' END AS user_name
+    FROM audit_logs a ORDER BY a.created_at DESC, a.id DESC LIMIT 6")->fetchAll();
 $totalSpaces = (int) $data['metrics']['total_spaces'];
 $available = (int) ($summary['available'] ?? 0);
 $reserved = (int) ($summary['reserved'] ?? 0);

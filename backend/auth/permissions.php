@@ -6,6 +6,7 @@ function require_admin(): array
 {
     $user = require_auth();
     if (($user['role'] ?? null) !== 'admin') {
+        AuditService::denied('admin_required');
         http_response_code(403);
         throw new RuntimeException('Solo el administrador puede realizar esta accion.');
     }
@@ -16,6 +17,7 @@ function require_driver(): array
 {
     $user = require_auth();
     if (($user['role'] ?? null) !== 'driver') {
+        AuditService::denied('driver_required');
         http_response_code(403);
         throw new RuntimeException('Esta accion solo esta disponible para conductores.');
     }
@@ -30,6 +32,7 @@ function require_reservation_owner(array $reservation): array
     }
 
     if ((int) $reservation['user_id'] !== (int) $user['id']) {
+        AuditService::denied('reservation_owner_required');
         http_response_code(403);
         throw new RuntimeException('No tienes permiso para acceder a esta reserva.');
     }

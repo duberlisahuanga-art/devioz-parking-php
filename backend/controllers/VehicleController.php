@@ -41,16 +41,18 @@ final class VehicleController
             $selection = VehicleCatalog::validateSelection($brand, $model, ($data['catalog_manual'] ?? '') === '1');
         }
 
-        $id = Vehicle::create((int) $user['id'], [
-            'plate' => $plate,
-            'brand' => $selection['brand'],
-            'model' => $selection['model'],
-            'color' => clean_string($data['color'] ?? '', 50),
-            'type' => $type,
-        ]);
+        return transaction(function () use ($user, $plate, $selection, $data, $type): int {
+            $id = Vehicle::create((int) $user['id'], [
+                'plate' => $plate,
+                'brand' => $selection['brand'],
+                'model' => $selection['model'],
+                'color' => clean_string($data['color'] ?? '', 50),
+                'type' => $type,
+            ]);
 
-        AuditService::log('Vehiculos', 'Creado', "Vehiculo {$plate} registrado.", 'Vehicle', $id, $plate);
-        return $id;
+            AuditService::log('Vehiculos', 'Creado', "Vehiculo {$plate} registrado.", 'Vehicle', $id, $plate);
+            return $id;
+        });
     }
 
     public static function destroy(int $vehicleId): void
@@ -58,13 +60,16 @@ final class VehicleController
         $user = require_driver();
         $vehicle = Vehicle::findOwned($vehicleId, (int) $user['id']);
         if (!$vehicle) {
+            AuditService::denied('vehicle_owner_required');
             throw new ValidationException('Vehiculo no encontrado.');
         }
         if (Vehicle::hasOpenReservation($vehicleId)) {
             throw new ValidationException('No puedes eliminar un vehiculo con una reserva vigente.');
         }
 
-        Vehicle::delete($vehicleId);
-        AuditService::log('Vehiculos', 'Eliminado', "Vehiculo {$vehicle['plate']} eliminado.", 'Vehicle', $vehicleId, $vehicle['plate']);
+        transaction(function () use ($vehicleId, $vehicle): void {
+            Vehicle::delete($vehicleId);
+            AuditService::log('Vehiculos', 'Eliminado', "Vehiculo {$vehicle['plate']} eliminado.", 'Vehicle', $vehicleId, $vehicle['plate']);
+        });
     }
 }

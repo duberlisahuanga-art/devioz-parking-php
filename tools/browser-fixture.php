@@ -36,6 +36,7 @@ foreach (['finance_expenses.sql','account_settings_notifications.sql','migration
 }
 $pdo->exec(file_get_contents($root . '/database/migrations/20261015_vehicle_catalog.sql'));
 $pdo->exec(file_get_contents($root . '/database/migrations/20261015_reservation_renewals.sql'));
+$pdo->exec(file_get_contents($root . '/database/migrations/20261015_password_recovery.sql'));
 require_once $root . '/backend/services/VehicleCatalogImporter.php';
 VehicleCatalogImporter::import($pdo, $root . '/database/import/open-vehicle-db');
 $pdo->exec("ALTER TABLE cameras ADD COLUMN channel_number TINYINT UNSIGNED NULL, ADD COLUMN location VARCHAR(150) NULL, ADD COLUMN rtsp_path VARCHAR(255) NULL, ADD COLUMN stream_protocol ENUM('hls','webrtc') DEFAULT 'hls', ADD COLUMN preferred_quality ENUM('sub','main') DEFAULT 'sub', ADD COLUMN brightness INT DEFAULT 100, ADD COLUMN contrast INT DEFAULT 100, ADD COLUMN saturation INT DEFAULT 100, ADD COLUMN osd_datetime TINYINT DEFAULT 1, ADD COLUMN osd_camera_name TINYINT DEFAULT 1");

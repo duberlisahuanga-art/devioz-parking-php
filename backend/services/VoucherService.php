@@ -14,6 +14,7 @@ final class VoucherService
         if ($type === 'payment') {
             $record = Payment::find($id);
             if (!$record || ($user['role'] !== 'admin' && (int) $record['user_id'] !== (int) $user['id'])) {
+                AuditService::denied('payment_voucher_owner_required');
                 return null;
             }
         } elseif ($type === 'expense' && $user['role'] === 'admin') {
@@ -22,6 +23,7 @@ final class VoucherService
                 return null;
             }
         } else {
+            AuditService::denied('voucher_type_or_role_denied');
             return null;
         }
         $path = $record['voucher_path'] ?? '';

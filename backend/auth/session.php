@@ -31,6 +31,10 @@ function current_user(): ?array
         $loadedId = $id;
     }
 
+    if ($cache && (int)($cache['session_version'] ?? 0) !== (int)($_SESSION['session_version'] ?? 0)) {
+        unset($_SESSION['user_id'], $_SESSION['session_version']);
+        return null;
+    }
     return $cache ?: null;
 }
 
@@ -57,6 +61,7 @@ function require_auth(): array
     }
 
     if (($user['status'] ?? 'inactive') !== 'active') {
+        AuditService::denied('inactive_session');
         session_unset();
         session_destroy();
         redirect_to('/frontend/login.php');
@@ -101,6 +106,7 @@ function verify_csrf(?string $token = null): void
 {
     $token ??= $_POST['csrf_token'] ?? null;
     if (!is_string($token) || !hash_equals(csrf_token(), $token)) {
+        AuditService::denied('csrf_invalid');
         throw new ValidationException('Token CSRF invalido.');
     }
 }

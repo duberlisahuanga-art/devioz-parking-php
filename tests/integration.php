@@ -35,13 +35,15 @@ function rejected(callable $call, string $name): void
 try {
     $schema = str_replace('devioz_parking', $database, file_get_contents($root . '/database/sql/schema.sql'));
     $admin->exec($schema);
-    foreach (['finance_expenses.sql', 'account_settings_notifications.sql', 'migrations/20261014_payment_integrity.sql', 'migrations/20261015_reservation_renewals.sql'] as $path) {
+    foreach (['finance_expenses.sql', 'account_settings_notifications.sql', 'migrations/20261014_payment_integrity.sql', 'migrations/20261015_reservation_renewals.sql', 'migrations/20261015_password_recovery.sql'] as $path) {
         $admin->exec(str_replace('devioz_parking', $database, file_get_contents($root . '/database/' . $path)));
     }
     putenv('DB_HOST=' . $host);
     putenv('DB_DATABASE=' . $database);
     putenv('DB_USERNAME=' . $username);
     putenv('DB_PASSWORD=' . $password);
+    $testStorage = $root . '/backend/storage/' . $database . '-integration';
+    putenv('APP_STORAGE=' . $testStorage);
     require $root . '/backend/bootstrap.php';
     // Conservar errores como fallo del proceso para que CI no pueda mostrar verde.
     restore_exception_handler();
@@ -138,6 +140,253 @@ try {
     } finally {
         unlink($fixture);
     }
+    // Audit guarantees: historical actor, rejected permissions and atomic writes.
+    $actorId = User::create(['name'=>'Actor original','email'=>'actor@integration.invalid',
+        'password'=>password_hash('Testing123!', PASSWORD_DEFAULT),'role'=>'driver','status'=>'active']);
+    $_SESSION['user_id'] = $actorId;
+    $eventId = AuditService::log('Prueba','Historico','Evento de identidad');
+    $today = date('Y-m-d');
+    check(count(AuditLog::all(filters: ['module'=>'Prueba','user_id'=>(string)$actorId,
+        'from'=>$today,'to'=>$today,'action'=>'Historico'])) === 1, 'filtros combinados incluyen día completo');
+    check(AuditLog::all(filters: ['module'=>'Prueba','entity_type'=>'Payment','entity_id'=>'99999']) === [],
+        'filtros de entidad excluyen eventos ajenos');
+    rejected(fn() => AuditLog::all(filters: ['from'=>'2026-02-30']), 'fecha imposible rechazada');
+    rejected(fn() => AuditLog::all(filters: ['from'=>'2026-10-16','to'=>'2026-10-15']), 'rango invertido rechazado');
+    rejected(fn() => AuditLog::all(filters: ['user_id'=>'1 OR 1=1']), 'identificador SQL rechazado');
+    rejected(fn() => AuditLog::all(filters: ['module'=>['Prueba']]), 'filtro no escalar rechazado');
+    User::updateProfile($actorId, 'Actor cambiado', 'changed@integration.invalid', null);
+    $history = AuditLog::all('Historico', 'actor@integration.invalid');
+    check(count($history) === 1 && $history[0]['user_name'] === 'Actor original', 'identidad y búsqueda conservan perfil histórico');
+    db()->prepare('DELETE FROM users WHERE id=?')->execute([$actorId]);
+    $history = AuditLog::all('Historico');
+    check(count(AuditLog::all(filters: ['user_id'=>(string)$actorId])) === 1, 'filtro de actor funciona tras eliminar cuenta');
+    check($history[0]['user_id'] === null && $history[0]['user_email'] === 'actor@integration.invalid', 'identidad sobrevive a eliminación de cuenta');
+    $_SESSION['user_id'] = 2;
+    try {
+        require_admin();
+        check(false, 'conductor no puede consultar auditoría');
+    } catch (RuntimeException $e) {
+        check(http_response_code() === 403, 'permiso admin rechazado');
+        http_response_code(200);
+    }
+    $security = AuditLog::all('Acceso rechazado');
+    check(json_decode($security[0]['metadata'], true)['reason'] === 'admin_required', 'rechazo de permisos registrado');
+    unset($_SESSION['user_id']);
+    rejected(fn() => AuthController::login(['email'=>'missing@integration.invalid','password'=>'NeverLogThis123!']), 'login incorrecto rechazado');
+    $security = AuditLog::all('Acceso rechazado');
+    check(!str_contains($security[0]['metadata'], 'NeverLogThis') &&
+        json_decode($security[0]['metadata'], true)['reason'] === 'invalid_credentials', 'fallo de login sin contraseña en auditoría');
+    $_SESSION['user_id'] = 2;
+    $vehicle = VehicleController::store(['plate'=>'TST-901','brand'=>'Prueba','model'=>'Prueba','type'=>'moto']);
+    db()->exec('RENAME TABLE audit_logs TO audit_logs_unavailable');
+    try {
+        try {
+            VehicleController::store(['plate'=>'TST-902','brand'=>'Prueba','model'=>'Prueba','type'=>'moto']);
+            check(false, 'alta de vehículo debe fallar sin auditoría');
+        } catch (PDOException $e) {
+            check(!Vehicle::plateExists('TST-902'), 'fallo de auditoría revierte alta de vehículo');
+        }
+        try {
+            VehicleController::destroy($vehicle);
+            check(false, 'baja de vehículo debe fallar sin auditoría');
+        } catch (PDOException $e) {
+            check(Vehicle::find($vehicle) !== null, 'fallo de auditoría revierte baja de vehículo');
+        }
+        unset($_SESSION['user_id']);
+        try {
+            AuthController::register(['name'=>'Rollback','email'=>'rollback@integration.invalid',
+                'password'=>'Testing123!','password_confirmation'=>'Testing123!']);
+            check(false, 'registro debe fallar sin auditoría');
+        } catch (PDOException $e) {
+            check(User::findByEmail('rollback@integration.invalid') === null && current_user_id() === null,
+                'fallo de auditoría revierte cuenta y no inicia sesión');
+        }
+    } finally {
+        db()->exec('RENAME TABLE audit_logs_unavailable TO audit_logs');
+    }
+    $_SESSION['user_id'] = 1;
+    AuditService::log('Prueba detalle', 'Actualizada', 'Cambio sintético', 'Expense', 999, 'EG-999', [
+        'reason'=>'<script>audit_test</script>',
+        'before'=>['amount'=>'10.00', 'voucher_path'=>'secret_fixture_path'],
+        'after'=>['amount'=>'20.00', 'voucher_path'=>'secret_fixture_path'],
+        'password'=>'secret_fixture_password',
+    ]);
+    $_GET = ['module'=>'Prueba detalle'];
+    ob_start();
+    require $root . '/frontend/admin/auditoria.php';
+    $auditHtml = ob_get_clean();
+    check(str_contains($auditHtml, '10.00') && str_contains($auditHtml, '20.00'), 'detalle muestra antes y después');
+    check(str_contains($auditHtml, '&lt;script&gt;audit_test&lt;/script&gt;') && !str_contains($auditHtml, '<script>audit_test'),
+        'detalle escapa contenido HTML');
+    check(!str_contains($auditHtml, 'secret_fixture_path') && !str_contains($auditHtml, 'secret_fixture_password'),
+        'detalle excluye rutas y metadatos no permitidos');
+    $_GET = [];
+    $_SESSION['user_id'] = 3;
+    rejected(fn() => ReservationController::requestCancellation($id, 'Prueba de rechazo'),
+        'cancelación ajena rechazada');
+    $denials = AuditLog::all('Acceso rechazado');
+    check(json_decode($denials[0]['metadata'], true)['reason'] === 'cancellation_reservation_owner_required',
+        'rechazo específico sobrevive al rollback');
+    rejected(fn() => ReservationController::renew($id), 'renovación ajena rechazada');
+    $denials = AuditLog::all('Acceso rechazado');
+    check(json_decode($denials[0]['metadata'], true)['reason'] === 'renewal_reservation_owner_required',
+        'renovación rechazada conserva auditoría');
+    $fallbackStorage = $root . '/backend/storage/audit-fallback-test-' . bin2hex(random_bytes(6));
+    $previousStorage = getenv('APP_STORAGE');
+    putenv('APP_STORAGE=' . $fallbackStorage);
+    db()->exec('RENAME TABLE audit_logs TO audit_logs_unavailable');
+    try {
+        AuditService::denied('fallback_test');
+        $fallbackFile = $fallbackStorage . '/audit-fallback/security-' . date('Y-m-d') . '.jsonl';
+        $fallbackData = json_decode(file_get_contents($fallbackFile), true, 512, JSON_THROW_ON_ERROR);
+        check($fallbackData['reason'] === 'fallback_test', 'contingencia conserva rechazo si la tabla no está disponible');
+    } finally {
+        db()->exec('RENAME TABLE audit_logs_unavailable TO audit_logs');
+        putenv($previousStorage === false ? 'APP_STORAGE' : 'APP_STORAGE=' . $previousStorage);
+        if (isset($fallbackFile) && is_file($fallbackFile)) unlink($fallbackFile);
+        if (is_dir($fallbackStorage . '/audit-fallback')) rmdir($fallbackStorage . '/audit-fallback');
+        if (is_dir($fallbackStorage)) rmdir($fallbackStorage);
+    }
+    require_once $root . '/backend/services/AuditPermissions.php';
+    require_once $root . '/backend/services/AuditArchive.php';
+    $limitedName = 'devioz_audit_test_' . bin2hex(random_bytes(6));
+    $limitedPassword = bin2hex(random_bytes(32));
+    $limitedAccount = $admin->quote($limitedName) . "@'127.0.0.1'";
+    $admin->exec('CREATE USER ' . $limitedAccount . ' IDENTIFIED BY ' . $admin->quote($limitedPassword));
+    try {
+        AuditPermissions::grant($admin, $database, $limitedAccount);
+        $limited = new PDO('mysql:host=' . $host . ';dbname=' . $database . ';charset=utf8mb4',
+            $limitedName, $limitedPassword, [PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);
+        AuditPermissions::verify($limited);
+        check(true, 'cuenta limitada permite consulta/inserción y bloquea modificación/borrado');
+    } finally {
+        $admin->exec('DROP USER ' . $limitedAccount);
+    }
+    $archive = $root . '/backend/storage/audit-test-' . bin2hex(random_bytes(6)) . '.jsonl';
+    $archiveKey = bin2hex(random_bytes(32));
+    $mirrorDirectory = $root . '/backend/storage/audit-mirror-test-' . bin2hex(random_bytes(6));
+    try {
+        $archived = AuditArchive::backup(db(), $archive, $archiveKey);
+        check($archived > 0 && AuditArchive::verify(db(), $archive, $archiveKey) === $archived,
+            'respaldo restaura todos los campos y verifica HMAC');
+        AuditArchive::mirror($archive, $mirrorDirectory);
+        AuditArchive::mirror($archive . '.manifest.json', $mirrorDirectory);
+        check(AuditArchive::verify(db(), $mirrorDirectory . '/' . basename($archive), $archiveKey) === $archived,
+            'segunda copia se restaura y coincide con el original');
+        file_put_contents($archive, "{}\n", FILE_APPEND);
+        try {
+            AuditArchive::verify(db(), $archive, $archiveKey);
+            check(false, 'respaldo alterado debe rechazarse');
+        } catch (RuntimeException $error) {
+            check(true, 'respaldo alterado rechazado');
+        }
+    } finally {
+        if (is_file($archive)) unlink($archive);
+        if (is_file($archive . '.manifest.json')) unlink($archive . '.manifest.json');
+        foreach ([basename($archive), basename($archive) . '.manifest.json'] as $copyName) {
+            if (is_file($mirrorDirectory . '/' . $copyName)) unlink($mirrorDirectory . '/' . $copyName);
+        }
+        if (is_dir($mirrorDirectory)) rmdir($mirrorDirectory);
+    }
+    // Exercise the maintenance command only against this disposable database.
+    $retentionDirectory = $root . '/backend/storage/audit-retention-test-' . bin2hex(random_bytes(6));
+    mkdir($retentionDirectory, 0700, true);
+    $oldId = AuditLog::create(['action'=>'Prueba antigua','description'=>'Evento sintético']);
+    $boundaryId = AuditLog::create(['action'=>'Prueba límite','description'=>'Evento sintético']);
+    db()->prepare('UPDATE audit_logs SET created_at=? WHERE id=?')->execute(['2026-10-10 23:59:59', $oldId]);
+    db()->prepare('UPDATE audit_logs SET created_at=? WHERE id=?')->execute(['2026-10-11 00:00:00', $boundaryId]);
+    try {
+        $environment = array_merge(getenv(), ['AUDIT_BACKUP_DIR'=>$retentionDirectory,
+            'AUDIT_BACKUP_MIRROR_DIR'=>'', 'AUDIT_BACKUP_KEY'=>bin2hex(random_bytes(32)),
+            'DB_MAINTENANCE_USERNAME'=>$username, 'DB_MAINTENANCE_PASSWORD'=>$password]);
+        $process = proc_open([PHP_BINARY, $root . '/tools/prune-audit.php', '2026-10-11', '--apply'],
+            [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']], $pipes, $root, $environment);
+        if (!is_resource($process)) throw new RuntimeException('No se inició prueba de limpieza.');
+        fclose($pipes[0]);
+        $output = stream_get_contents($pipes[1]);
+        $errors = stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        check(proc_close($process) === 0, 'limpieza termina tras respaldar y restaurar en base aislada');
+        $findAudit = db()->prepare('SELECT COUNT(*) FROM audit_logs WHERE id=?');
+        $findAudit->execute([$oldId]);
+        check((int)$findAudit->fetchColumn() === 0, 'limpieza elimina evento anterior al corte');
+        $findAudit->execute([$boundaryId]);
+        check((int)$findAudit->fetchColumn() === 1, 'limpieza conserva exactamente el inicio del primer día');
+    } finally {
+        foreach (glob($retentionDirectory . '/audit-before-prune-*') ?: [] as $file) unlink($file);
+        rmdir($retentionDirectory);
+    }
+    $recoverId = User::create(['name'=>'Recuperación sintética','email'=>'recovery@integration.invalid',
+        'password'=>password_hash('Before123!', PASSWORD_DEFAULT),'role'=>'driver','status'=>'active']);
+    $_SESSION['user_id'] = $recoverId;
+    $_SESSION['session_version'] = 0;
+    check(current_user() !== null, 'sesión previa a recuperación válida');
+    PasswordRecoveryService::request('recovery@integration.invalid');
+    $queuedCipher = db()->query('SELECT encrypted_token FROM password_resets WHERE user_id=' . $recoverId)->fetchColumn();
+    $mailToken = null;
+    check(PasswordRecoveryService::deliver(function (string $email, string $token) use (&$mailToken): void {
+        if ($email !== 'recovery@integration.invalid') throw new RuntimeException('Destinatario incorrecto');
+        $mailToken = $token;
+    }) === 1, 'cola entrega enlace al correo de la cuenta');
+    $resetRow = db()->query('SELECT * FROM password_resets WHERE user_id=' . $recoverId)->fetch();
+    check(is_string($mailToken) && $resetRow['token_hash'] === hash('sha256',$mailToken)
+        && $resetRow['encrypted_token'] === null, 'token almacenado como hash y eliminado de la cola tras enviar');
+    check(!str_contains(base64_decode($queuedCipher),$mailToken), 'cola pendiente cifra el token recuperable');
+    rejected(fn() => PasswordRecoveryService::reset($mailToken,'After123!','Different123!'), 'confirmación incorrecta no consume enlace');
+    PasswordRecoveryService::reset($mailToken,'After123!','After123!');
+    check(password_verify('After123!',User::find($recoverId)['password']), 'enlace cambia contraseña sin conocer la anterior');
+    rejected(fn() => PasswordRecoveryService::reset($mailToken,'Again123!','Again123!'), 'enlace usado no se puede reutilizar');
+    $_SESSION['user_id'] = 3;
+    current_user();
+    $_SESSION['user_id'] = $recoverId;
+    check(current_user() === null && current_user_id() === null, 'sesiones anteriores revocadas tras recuperación');
+    PasswordRecoveryService::request('recovery@integration.invalid');
+    $expiredToken = null;
+    PasswordRecoveryService::deliver(function (string $email,string $token) use (&$expiredToken): void { $expiredToken=$token; });
+    db()->exec('UPDATE password_resets SET expires_at=DATE_SUB(NOW(),INTERVAL 1 SECOND) WHERE user_id=' . $recoverId);
+    rejected(fn() => PasswordRecoveryService::reset($expiredToken,'After456!','After456!'), 'enlace vencido rechazado');
+    PasswordRecoveryService::request('recovery@integration.invalid');
+    $freshToken = null;
+    PasswordRecoveryService::deliver(function (string $email,string $token) use (&$freshToken): void { $freshToken=$token; });
+    rejected(fn() => PasswordRecoveryService::reset($expiredToken,'After456!','After456!'), 'solicitud nueva invalida enlace anterior');
+    $beforeFailure = User::find($recoverId)['password'];
+    db()->exec('RENAME TABLE audit_logs TO audit_logs_unavailable');
+    try {
+        try {
+            PasswordRecoveryService::reset($freshToken,'After789!','After789!');
+            check(false,'fallo de auditoría debe revertir recuperación');
+        } catch (PDOException $error) {
+            check(User::find($recoverId)['password'] === $beforeFailure, 'fallo de auditoría revierte contraseña');
+        }
+    } finally {
+        db()->exec('RENAME TABLE audit_logs_unavailable TO audit_logs');
+    }
+    PasswordRecoveryService::reset($freshToken,'After789!','After789!');
+    check(password_verify('After789!',User::find($recoverId)['password']), 'enlace sigue válido tras rollback');
+    PasswordRecoveryService::request('nobody@integration.invalid');
+    check((int)db()->query('SELECT COUNT(*) FROM password_resets')->fetchColumn() === 0, 'correo inexistente no genera enlace');
+    User::create(['name'=>'Cuenta inactiva','email'=>'inactive@integration.invalid',
+        'password'=>password_hash('Testing123!',PASSWORD_DEFAULT),'role'=>'driver','status'=>'inactive']);
+    PasswordRecoveryService::request('inactive@integration.invalid');
+    check((int)db()->query('SELECT COUNT(*) FROM password_resets')->fetchColumn() === 0, 'solicitud sin cuenta activa no crea enlace');
+    $otherRecoveryId = User::create(['name'=>'Cola sintética','email'=>'queue@integration.invalid',
+        'password'=>password_hash('Testing123!',PASSWORD_DEFAULT),'role'=>'driver','status'=>'active']);
+    PasswordRecoveryService::request('queue@integration.invalid');
+    PasswordRecoveryService::deliver(static function (): void { throw new RuntimeException('Fallo sintético SMTP'); });
+    $failedMail = db()->query('SELECT delivery_attempts,encrypted_token FROM password_resets WHERE user_id=' . $otherRecoveryId)->fetch();
+    check((int)$failedMail['delivery_attempts'] === 1 && $failedMail['encrypted_token'] !== null,
+        'fallo SMTP conserva cola cifrada para reintento limitado');
+    $changedEmailToken = null;
+    PasswordRecoveryService::deliver(function (string $email,string $token) use (&$changedEmailToken): void { $changedEmailToken=$token; });
+    db()->prepare('UPDATE users SET email=? WHERE id=?')->execute(['changed-queue@integration.invalid',$otherRecoveryId]);
+    rejected(fn() => PasswordRecoveryService::reset($changedEmailToken,'After789!','After789!'), 'cambio de correo invalida enlace anterior');
+    try {
+        for ($attempt = 0; $attempt < 4; $attempt++) PasswordRecoveryService::request('limited@integration.invalid');
+        check(false,'solicitudes repetidas deben limitarse');
+    } catch (RateLimitException $error) {
+        check(true,'solicitudes repetidas limitadas sin bloquear la cuenta');
+    }
     echo $passed . " comprobaciones de integración correctas.\n";
 } finally {
     // El nombre se genera aquí, no proviene del usuario ni de DB_DATABASE.
@@ -145,4 +394,9 @@ try {
         throw new RuntimeException('Nombre de limpieza inválido.');
     }
     $admin->exec('DROP DATABASE `' . $database . '`');
+    if (isset($testStorage)) {
+        foreach (glob($testStorage . '/rate-limits/*.json') ?: [] as $file) unlink($file);
+        if (is_dir($testStorage . '/rate-limits')) rmdir($testStorage . '/rate-limits');
+        if (is_dir($testStorage)) rmdir($testStorage);
+    }
 }

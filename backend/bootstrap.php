@@ -110,6 +110,8 @@ require_once __DIR__ . '/auth/permissions.php';
 
 require_once __DIR__ . '/services/AuditService.php';
 require_once __DIR__ . '/services/RateLimiter.php';
+require_once __DIR__ . '/services/RecoveryMailer.php';
+require_once __DIR__ . '/services/PasswordRecoveryService.php';
 require_once __DIR__ . '/services/VoucherService.php';
 
 require_once __DIR__ . '/controllers/AuthController.php';

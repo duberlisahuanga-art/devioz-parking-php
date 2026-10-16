@@ -118,9 +118,13 @@ final class CameraController
         $camera = Camera::find($cameraId);
         if (!$camera) throw new ValidationException('Cámara no encontrada.');
         $values = self::validate($data, $cameraId);
-        self::persist(function () use ($cameraId, $values): void {
+        self::persist(function () use ($cameraId, $values, $camera): void {
             Camera::update($cameraId, $values);
-            AuditService::log('Camaras', 'Actualizada', 'Cámara actualizada.', 'Camera', $cameraId, $values['name']);
+            $fields = array_flip(['name', 'coverage', 'location', 'status', 'channel_number', 'brightness', 'contrast', 'saturation']);
+            AuditService::log('Camaras', 'Actualizada', 'Cámara actualizada.', 'Camera', $cameraId, $values['name'], [
+                'before' => array_intersect_key($camera, $fields),
+                'after' => array_intersect_key($values, $fields),
+            ]);
         });
     }
 

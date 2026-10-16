@@ -7,6 +7,7 @@ if (PHP_SAPI !== 'cli') {
     exit;
 }
 require_once __DIR__ . '/../backend/config/app.php';
+require_once __DIR__ . '/../backend/services/AuditPermissions.php';
 if (AppConfig::production()) {
     throw new RuntimeException('Este instalador sólo configura desarrollo local.');
 }
@@ -21,7 +22,7 @@ $name = 'devioz_app_' . bin2hex(random_bytes(3));
 $password = bin2hex(random_bytes(32));
 $account = $pdo->quote($name) . "@'127.0.0.1'";
 $pdo->exec('CREATE USER ' . $account . ' IDENTIFIED BY ' . $pdo->quote($password));
-$pdo->exec('GRANT SELECT, INSERT, UPDATE, DELETE ON devioz_parking.* TO ' . $account);
+AuditPermissions::grant($pdo, 'devioz_parking', $account);
 $values = ['APP_ENV' => 'development', 'DB_HOST' => '127.0.0.1', 'DB_PORT' => '3306',
     'DB_DATABASE' => 'devioz_parking', 'DB_USERNAME' => $name, 'DB_PASSWORD' => $password,
     'APP_SECRET' => bin2hex(random_bytes(32)), 'APP_BASE_URL' => '/devioz-parking-php'];

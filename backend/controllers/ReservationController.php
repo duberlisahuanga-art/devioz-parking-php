@@ -111,6 +111,7 @@ final class ReservationController
 
             $vehicle = Vehicle::findOwned($vehicleId, (int) $user['id']);
             if (!$vehicle) {
+                AuditService::denied('reservation_vehicle_owner_required');
                 throw new ValidationException('El vehiculo seleccionado no te pertenece.');
             }
 
@@ -165,6 +166,7 @@ final class ReservationController
         return transaction(function () use ($reservationId, $user): int {
             $previous = Reservation::find($reservationId, true);
             if (!$previous || (int) $previous['user_id'] !== (int) $user['id']) {
+                AuditService::denied('renewal_reservation_owner_required');
                 throw new ValidationException('Reserva no encontrada.');
             }
             $existing = db()->prepare('SELECT id FROM reservations WHERE renewed_from_id=:id LIMIT 1');
@@ -186,6 +188,7 @@ final class ReservationController
                 throw new ValidationException('La plaza ya no está disponible. Elige otra desde Reservar plaza.');
             }
             if (!Vehicle::findOwned((int) $previous['vehicle_id'], (int) $user['id'])) {
+                AuditService::denied('renewal_vehicle_owner_required');
                 throw new ValidationException('El vehículo ya no pertenece a tu cuenta.');
             }
             $today = self::today();
@@ -311,6 +314,7 @@ final class ReservationController
         try {
             $reservation = Reservation::find($reservationId, true);
             if (!$reservation || (int) $reservation['user_id'] !== (int) $user['id']) {
+                AuditService::denied('cancellation_reservation_owner_required');
                 throw new ValidationException('No puedes solicitar la cancelacion de esta reserva.');
             }
             if ($reservation['status'] !== 'confirmed') {

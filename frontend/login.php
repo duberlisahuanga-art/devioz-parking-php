@@ -64,6 +64,7 @@ $flash = consume_flash();
                     </div>
                 </div>
                 <button class="btn btn-primary btn-lg w-100 mt-2" type="submit">Ingresar</button>
+                <a href="<?= htmlspecialchars(app_url('/frontend/recuperar-password.php'), ENT_QUOTES, 'UTF-8') ?>">Olvidé mi contraseña</a>
             </form>
 
 

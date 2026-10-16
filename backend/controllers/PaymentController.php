@@ -38,6 +38,7 @@ final class PaymentController
             return transaction(function () use ($reservationId, $user, $file, $allowed, $mime, $code, &$destination): int {
                 $r = Reservation::find($reservationId, true);
                 if (!$r || (int) $r['user_id'] !== (int) $user['id']) {
+                    AuditService::denied('payment_reservation_owner_required');
                     throw new ValidationException('No tienes permiso para pagar esta reserva.');
                 }
                 if (!self::eligible($r) || $r['payment_status'] !== 'unpaid') {

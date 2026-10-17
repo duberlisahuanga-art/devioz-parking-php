@@ -20,3 +20,27 @@ La herramienta de restauración requiere CLI, desarrollo local, cuenta dedicada
 ausente y --apply; rechaza cuentas existentes y producción. Si falla la concesión
 o validación, retira sólo la cuenta recién creada. La operación afecta privilegios
 SQL y confirma implícitamente; no se presenta como transacción de datos.
+
+## Nuevo incidente de arranque comprobado
+
+La portada volvió a mostrar error de conexión. Apache estaba activo, pero no
+había proceso MariaDB ni escucha en el puerto 3306: el diagnóstico PDO devolvía
+2002. Se inició `mysqld.exe` con el `my.ini` habitual de XAMPP y `--standalone`.
+No se instaló un servicio ni se cambió el inicio automático de Windows.
+
+Al iniciar, MariaDB detectó y reparó automáticamente `mysql.global_priv` y
+`mysql.tables_priv`, registrando `Table is fixed` y después `ready for connections`.
+La cuenta dedicada de la aplicación estaba ausente y el acceso devolvía 1045.
+Se recreó mediante `tools/restore-local-db-account.php --apply`, conservando
+los valores privados y los permisos restringidos de auditoría.
+
+Verificación final: `CHECK TABLE mysql.global_priv, mysql.tables_priv` devolvió
+`OK` para ambas, la conexión de aplicación fue aceptada y portada/login
+respondieron HTTP 200 sin el mensaje de error. Se abrió la portada en el navegador.
+No hubo reparación manual ni borrado de archivos del motor o datos del negocio.
+
+La reparación y los avisos de tablas no cerradas correctamente son compatibles
+con un cierre no ordenado. No se confirmó por qué desapareció la cuenta y no
+debe atribuirse a la reparación automática sin más evidencia. Para futuros
+arranques se necesitan Apache y MySQL activos en XAMPP; detener el motor de
+forma normal desde el panel, evitando terminar su proceso forzosamente.

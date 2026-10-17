@@ -3992,3 +3992,41 @@ html[data-theme=dark] .camera-hmi .camera-settings-danger p{color:#fca5a5}
 .camera-recordings-player{margin-top:18px;padding-top:18px;border-top:1px solid var(--border)}
 .camera-recordings-player h4{font-size:15px;margin:0;overflow-wrap:anywhere}
 @media(max-width:575px){.camera-recordings-heading>button{width:100%}.camera-recording-actions{width:100%}.camera-recording-actions>*{flex:1 1 120px}.camera-recordings-player video{max-height:50dvh}}
+
+/* Biblioteca de vídeos: navegación por días y horas del estacionamiento. */
+.camera-recordings-panel{scroll-margin-top:110px}
+.camera-hmi .camera-library__note{margin:16px 0;padding:12px 14px;border:1px solid var(--border);border-radius:10px;background:var(--surface);color:var(--text);font-size:12px;line-height:1.7}
+.camera-library__layout{display:grid;grid-template-columns:minmax(290px,360px) minmax(0,1fr);gap:24px;align-items:start;margin-top:20px}
+.camera-library__calendar,.camera-library__detail{min-width:0}
+.camera-library__calendar{padding:16px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.camera-library__month-controls{display:flex;align-items:end;gap:8px}
+.camera-hmi .camera-library__month-controls label{min-width:0;flex:1;margin:0;font-size:12px;font-weight:700}
+.camera-hmi .camera-library__month-controls input{display:block;width:100%;min-width:0;margin:6px 0 0;min-height:44px;padding:8px 10px;font-size:13px}
+.camera-hmi .camera-library__month-controls button{display:inline-flex;align-items:center;justify-content:center;flex:0 0 44px;width:44px;min-height:44px;padding:8px}
+.camera-library__calendar h4,.camera-library__detail h4{font-size:15px;font-weight:700;line-height:1.5;margin:0 0 16px;overflow-wrap:anywhere}
+.camera-library__calendar h4{margin:20px 0 12px;text-transform:capitalize}
+.camera-library__weekdays,.camera-library__days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.camera-library__weekdays{margin-bottom:6px;text-align:center;color:var(--muted);font-size:11px;font-weight:700}
+.camera-hmi .camera-library__day{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;min-width:0;min-height:54px;padding:5px 2px;border-radius:8px;font-variant-numeric:tabular-nums;line-height:1.25}
+.camera-library__day-number{font-size:13px;font-weight:700}
+.camera-library__day-count{display:block;font-size:10px;font-weight:600;color:var(--muted);max-width:100%;overflow-wrap:anywhere}
+.camera-hmi .camera-library__day.has-recordings{border-color:var(--primary);background:var(--accent-surface)}
+.camera-hmi .camera-library__day.has-recordings .camera-library__day-count{color:var(--camera-accent-ink)}
+.camera-hmi .camera-library__day:hover{background:var(--accent-surface);border-color:var(--primary)}
+.camera-hmi .camera-library__day[aria-pressed=true],.camera-hmi .camera-library__hour[aria-pressed=true]{background:var(--primary);border-color:var(--primary);color:#fff}
+.camera-hmi .camera-library__day[aria-pressed=true]:hover,.camera-hmi .camera-library__hour[aria-pressed=true]:hover{background:var(--primary-dark);border-color:var(--primary-dark)}
+.camera-hmi .camera-library__day[aria-pressed=true] .camera-library__day-count,.camera-hmi .camera-library__hour[aria-pressed=true] .camera-library__hour-count{color:#fff}
+.camera-library__day-placeholder{min-width:0}
+.camera-hmi .camera-library__calendar-status{font-size:12px;line-height:1.6;margin:14px 0 0}
+.camera-library__calendar-status:empty{display:none}
+.camera-hmi .camera-library__hours-label{margin:0 0 10px;font-size:12px;font-weight:700;color:var(--text)}
+.camera-library__hours{display:grid;grid-template-columns:repeat(auto-fit,minmax(76px,1fr));gap:8px}
+.camera-hmi .camera-library__hour{display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:4px;min-width:0;min-height:44px;padding:8px 5px;font-variant-numeric:tabular-nums;font-size:12px}
+.camera-library__hour--all{grid-column:1/-1}
+.camera-library__hour-count{font-size:11px;color:var(--muted)}
+.camera-hmi .camera-library__summary{font-size:12px;line-height:1.6;margin:16px 0 0;color:var(--text)}
+.camera-library__pagination{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.camera-library__pagination span{font-size:12px;font-variant-numeric:tabular-nums}
+.camera-hmi .camera-library__pagination button{min-height:44px}
+@media(max-width:1199px){.camera-library__layout{grid-template-columns:minmax(0,1fr)}.camera-library__calendar{width:100%;max-width:460px}.camera-hmi .camera-library__day{min-height:60px}}
+@media(max-width:575px){.camera-library__layout{gap:22px;margin-top:16px}.camera-library__calendar{padding:12px}.camera-library__month-controls{gap:6px}.camera-hmi .camera-library__month-controls button{flex-basis:40px;width:40px}.camera-hmi .camera-library__month-controls input{padding:8px 6px;font-size:12px}.camera-library__weekdays,.camera-library__days{gap:3px}.camera-library__weekdays{font-size:10px}.camera-hmi .camera-library__day{min-height:52px}.camera-library__day-count{font-size:9px}.camera-library__hours{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.camera-library__pagination{gap:8px}.camera-library__pagination span{order:-1;width:100%;text-align:center}.camera-hmi .camera-library__pagination button{flex:1}}

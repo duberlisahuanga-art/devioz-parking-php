@@ -25,13 +25,27 @@ try {
     if (in_array($method, ['GET', 'HEAD'], true) && in_array($action, ['play', 'download'], true)) {
         CameraRecordingService::stream($scalar('id'), $action === 'download');
     }
-    if ($method === 'GET' && $action === 'list') {
+    if ($method === 'GET' && ($action === 'list' || $action === 'calendar')) {
         $parking = filter_var($scalar('parking_id'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         if ($parking === false) {
             throw new ValidationException('Selecciona un estacionamiento válido.');
         }
-        json_response(['items' => CameraRecordingService::recent($parking), 'limits' => CameraRecordingService::limits(),
-            'csrf_token' => csrf_token()]);
+        if ($action === 'calendar') {
+            $result = CameraRecordingService::calendar($parking, array_key_exists('month', $_GET) ? $scalar('month') : null);
+        } elseif (array_key_exists('date', $_GET)) {
+            $result = CameraRecordingService::library(
+                $parking,
+                $scalar('date'),
+                array_key_exists('hour', $_GET) ? $scalar('hour') : null,
+                $scalar('page', '1')
+            );
+        } else {
+            if (array_key_exists('hour', $_GET) || array_key_exists('page', $_GET)) {
+                throw new ValidationException('Selecciona una fecha para consultar una hora o una página.');
+            }
+            $result = ['items' => CameraRecordingService::recent($parking)];
+        }
+        json_response($result + ['limits' => CameraRecordingService::limits(), 'csrf_token' => csrf_token()]);
     }
     if ($method !== 'POST') {
         header('Allow: GET, HEAD, POST');

@@ -4,14 +4,9 @@ const APP = '/devioz-parking-php';
 const fs = require('node:fs');
 const path = require('node:path');
 const AxeBuilder = require('@axe-core/playwright').default;
+const { isolateCameraTest } = require('./camera-test-scope');
 
-test.beforeEach(async ({ page }) => {
-  await page.route('https://cdn.jsdelivr.net/**', async route => {
-    const headers = { ...route.request().headers() };
-    delete headers['x-devioz-test-scope'];
-    await route.continue({ headers });
-  });
-});
+test.beforeEach(async ({ page }, testInfo) => isolateCameraTest(page, testInfo));
 
 async function login(page, user = 'admin') {
   await page.goto(`${APP}/frontend/login.php`);
@@ -51,6 +46,7 @@ async function openWebcam(page) {
   });
   await login(page);
   await page.goto(`${APP}/frontend/admin/camaras.php`);
+  await page.locator('[data-camera-parking]').selectOption('1');
   await page.locator('[data-camera-action="webcam"]').click();
   await page.locator('[data-camera-action="webcam-connect"]').click();
   await expect(page.locator('[data-recording-action="start"]')).toBeEnabled();
@@ -62,9 +58,12 @@ async function saveRecording(page) {
   await start.click();
   await expect(page.locator('[data-recording-status]')).toContainText('Grabando');
   await page.waitForTimeout(1300);
+  const savedResponse = page.waitForResponse(response => response.url().includes('/grabaciones.php')
+    && response.request().method() === 'POST' && /name="action"\r?\n\r?\nsave\r?\n/.test(response.request().postData() || ''));
   await stop.click();
+  const saved = await (await savedResponse).json();
   await expect(page.locator('[data-recording-status]')).toContainText('Grabación guardada', { timeout: 30000 });
-  const item = page.locator('[data-recordings-list] [data-recording-item]').first();
+  const item = page.locator(`[data-recording-item="${saved.recording.id}"]`);
   await expect(item).toBeVisible();
   return item.getAttribute('data-recording-item');
 }

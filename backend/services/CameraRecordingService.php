@@ -164,6 +164,104 @@ final class CameraRecordingService
         return array_map(self::dto(...), CameraRecording::recent($parkingId));
     }
 
+    public static function calendar(int $parkingId, ?string $month = null): array
+    {
+        self::admin();
+        self::parking($parkingId);
+        $latestDate = CameraRecording::latestReadyDay($parkingId);
+        $month ??= substr($latestDate ?? (new DateTimeImmutable('now', new DateTimeZone('America/Lima')))->format('Y-m-d'), 0, 7);
+        if (!preg_match('/^[0-9]{4}-[0-9]{2}$/D', $month)) {
+            throw new ValidationException('Selecciona un mes válido con el formato AAAA-MM.');
+        }
+        $firstDay = self::libraryDate($month . '-01', 'Selecciona un mes válido con el formato AAAA-MM.');
+        $nextMonth = $firstDay->modify('first day of next month');
+        $intervals = [];
+        $dates = [];
+        for ($day = $firstDay; $day < $nextMonth; $day = $day->modify('+1 day')) {
+            $dates[] = $day->format('Y-m-d');
+            $intervals[] = ['start' => $day->format('Y-m-d H:i:s'), 'end' => $day->modify('+1 day')->format('Y-m-d H:i:s')];
+        }
+        $summary = CameraRecording::countReadyIntervals(
+            $parkingId,
+            $firstDay->format('Y-m-d H:i:s'),
+            $nextMonth->format('Y-m-d H:i:s'),
+            $intervals
+        );
+        $days = [];
+        foreach ($dates as $index => $date) {
+            $count = $summary['intervals'][$index];
+            if ($count > 0) {
+                $days[] = ['date' => $date, 'count' => $count];
+            }
+        }
+
+        return ['month' => $month, 'timezone' => 'America/Lima', 'days' => $days, 'latest_date' => $latestDate];
+    }
+
+    public static function library(int $parkingId, string $date, ?string $hour = null, string $page = '1'): array
+    {
+        self::admin();
+        self::parking($parkingId);
+        $day = self::libraryDate($date, 'Selecciona una fecha válida con el formato AAAA-MM-DD.');
+        if ($hour !== null && !preg_match('/^(?:[01]?[0-9]|2[0-3])$/D', $hour)) {
+            throw new ValidationException('Selecciona una hora entre 00 y 23.');
+        }
+        if (!preg_match('/^[1-9][0-9]{0,5}$/D', $page) || (int) $page > 100000) {
+            throw new ValidationException('Selecciona una página entre 1 y 100000.');
+        }
+
+        $selectedHour = $hour === null ? null : (int) $hour;
+        $pageNumber = (int) $page;
+        $pageSize = 20;
+        $dayEnd = $day->modify('+1 day');
+        $intervals = [];
+        for ($index = 0; $index < 24; $index++) {
+            $start = $day->setTime($index, 0);
+            $intervals[] = ['start' => $start->format('Y-m-d H:i:s'), 'end' => $start->modify('+1 hour')->format('Y-m-d H:i:s')];
+        }
+        $summary = CameraRecording::countReadyIntervals(
+            $parkingId,
+            $day->format('Y-m-d H:i:s'),
+            $dayEnd->format('Y-m-d H:i:s'),
+            $intervals
+        );
+        $hours = [];
+        foreach ($summary['intervals'] as $index => $count) {
+            $hours[] = ['hour' => $index, 'count' => $count];
+        }
+        $rangeStart = $selectedHour === null ? $day->format('Y-m-d H:i:s') : $intervals[$selectedHour]['start'];
+        $rangeEnd = $selectedHour === null ? $dayEnd->format('Y-m-d H:i:s') : $intervals[$selectedHour]['end'];
+        $total = $selectedHour === null ? $summary['total'] : $summary['intervals'][$selectedHour];
+        $items = CameraRecording::readyInRange($parkingId, $rangeStart, $rangeEnd, $pageSize, ($pageNumber - 1) * $pageSize);
+
+        return [
+            'items' => array_map(self::dto(...), $items),
+            'date' => $date,
+            'hour' => $selectedHour,
+            'hours' => $hours,
+            'page' => $pageNumber,
+            'page_size' => $pageSize,
+            'day_total' => $summary['total'],
+            'total' => $total,
+            'has_more' => $pageNumber * $pageSize < $total,
+            'timezone' => 'America/Lima',
+        ];
+    }
+
+    private static function libraryDate(string $date, string $message): DateTimeImmutable
+    {
+        if (!preg_match('/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/D', $date)) {
+            throw new ValidationException($message);
+        }
+        $year = (int) substr($date, 0, 4);
+        $parsed = DateTimeImmutable::createFromFormat('!Y-m-d', $date, new DateTimeZone('America/Lima'));
+        if ($year < 1000 || $year > 9998 || $parsed === false || $parsed->format('Y-m-d') !== $date) {
+            throw new ValidationException($message);
+        }
+
+        return $parsed;
+    }
+
     /** @return array{recording:array,path:string} */
     public static function media(string $publicId): array
     {

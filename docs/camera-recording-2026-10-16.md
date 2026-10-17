@@ -145,7 +145,10 @@ Los vídeos sintéticos de las pruebas no verifican el dispositivo físico ni el
 
 ## Continuación
 
-Quedan pendientes el calendario por día y hora, recorte y exportación de
+La biblioteca por día y hora está implementada desde el 17/10/2026; consultar
+[su uso y evidencia](camera-library-2026-10-17.md).
+
+Quedan pendientes el recorte y exportación de
 fragmentos, compartir mediante las opciones del dispositivo cuando sean
 compatibles, y la integración real con los cuatro canales del DVR Hikvision.
 Para el DVR falta confirmar modelo/firmware y capacidades de acceso a señales

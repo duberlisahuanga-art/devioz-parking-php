@@ -427,11 +427,17 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentView === 'webcam' && ['grid', 'single', 'manage', 'create', 'settings', 'back'].includes(action)
                 && recording?.preventLeaving()) return;
             if (action === 'grid') renderGrid();
-            else if (action === 'webcam') {
+            else if (action === 'webcam' || action === 'recordings') {
                 destroyPlayers();
                 show('webcam');
                 updateWebcamControls();
                 message('');
+                if (action === 'recordings') {
+                    const title = find('#camera-recordings-title');
+                    title.tabIndex = -1;
+                    title.focus({ preventScroll: true });
+                    find('.camera-recordings-panel').scrollIntoView({ block: 'start', behavior: 'instant' });
+                }
             }
             else if (action === 'webcam-connect') connectWebcam();
             else if (action === 'webcam-disconnect') stopWebcam();

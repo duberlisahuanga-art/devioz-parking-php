@@ -11,7 +11,7 @@ $state=json_decode(file_get_contents($root.'/backend/storage/browser-fixture.jso
 foreach (['DB_DATABASE'=>'database','DB_HOST'=>'host','DB_USERNAME'=>'username','DB_PASSWORD'=>'password'] as $key=>$field) putenv($key.'='.$state[$field]);
 putenv('APP_ENV=testing');
 $testScope = $_SERVER['HTTP_X_DEVIOZ_TEST_SCOPE'] ?? 'shared';
-if (!in_array($testScope, ['desktop', 'mobile'], true)) $testScope = 'shared';
+if (!is_string($testScope) || !preg_match('/^(desktop|mobile)(?:-[a-f0-9]{12})?$/D', $testScope)) $testScope = 'shared';
 // Isolate browser projects; both still exercise the real, unchanged login limits.
 putenv('APP_STORAGE='.$root.'/backend/storage/'.$state['database'].'-limits-'.$testScope);
 putenv('CAMERA_RECORDINGS_PATH='.$root.'/backend/storage/'.$state['database'].'-recordings');

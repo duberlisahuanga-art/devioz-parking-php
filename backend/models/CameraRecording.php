@@ -20,6 +20,76 @@ final class CameraRecording
         return $statement->fetchAll();
     }
 
+    public static function latestReadyDay(int $parkingId): ?string
+    {
+        $statement = db()->prepare(
+            "SELECT DATE_FORMAT(DATE_SUB(MAX(ended_at), INTERVAL 1 MICROSECOND), '%Y-%m-%d')"
+            . " FROM camera_recordings WHERE parking_id = :parking AND state = 'ready'"
+        );
+        $statement->execute(['parking' => $parkingId]);
+        $date = $statement->fetchColumn();
+
+        return is_string($date) && $date !== '' ? $date : null;
+    }
+
+    /**
+     * @param list<array{start:string,end:string}> $intervals
+     * @return array{total:int,intervals:list<int>}
+     */
+    public static function countReadyIntervals(
+        int $parkingId,
+        string $rangeStart,
+        string $rangeEnd,
+        array $intervals
+    ): array {
+        $columns = ['COUNT(*) AS total'];
+        $parameters = ['parking' => $parkingId, 'range_start' => $rangeStart, 'range_end' => $rangeEnd];
+        foreach ($intervals as $index => $interval) {
+            // Aliases and parameter names come only from the bounded integer index.
+            $columns[] = 'SUM(CASE WHEN started_at < :interval_end_' . $index
+                . ' AND ended_at > :interval_start_' . $index
+                . ' THEN 1 ELSE 0 END) AS interval_' . $index;
+            $parameters['interval_start_' . $index] = $interval['start'];
+            $parameters['interval_end_' . $index] = $interval['end'];
+        }
+
+        $statement = db()->prepare(
+            'SELECT ' . implode(', ', $columns)
+            . " FROM camera_recordings WHERE parking_id = :parking AND state = 'ready'"
+            . ' AND started_at < :range_end AND ended_at > :range_start'
+        );
+        $statement->execute($parameters);
+        $row = $statement->fetch(PDO::FETCH_ASSOC) ?: [];
+        $counts = [];
+        foreach ($intervals as $index => $_interval) {
+            $counts[] = (int) ($row['interval_' . $index] ?? 0);
+        }
+
+        return ['total' => (int) ($row['total'] ?? 0), 'intervals' => $counts];
+    }
+
+    public static function readyInRange(
+        int $parkingId,
+        string $rangeStart,
+        string $rangeEnd,
+        int $limit,
+        int $offset
+    ): array {
+        $statement = db()->prepare(
+            "SELECT * FROM camera_recordings WHERE parking_id = :parking AND state = 'ready'"
+            . ' AND started_at < :range_end AND ended_at > :range_start'
+            . ' ORDER BY started_at ASC, id ASC LIMIT :row_limit OFFSET :row_offset'
+        );
+        $statement->bindValue(':parking', $parkingId, PDO::PARAM_INT);
+        $statement->bindValue(':range_start', $rangeStart);
+        $statement->bindValue(':range_end', $rangeEnd);
+        $statement->bindValue(':row_limit', $limit, PDO::PARAM_INT);
+        $statement->bindValue(':row_offset', $offset, PDO::PARAM_INT);
+        $statement->execute();
+
+        return $statement->fetchAll();
+    }
+
     public static function expiredPending(int $creator): array
     {
         $statement = db()->prepare("SELECT * FROM camera_recordings WHERE created_by = :creator AND state = 'pending'"

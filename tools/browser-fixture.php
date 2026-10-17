@@ -65,6 +65,26 @@ foreach ([1=>'admin',2=>'driver',3=>'other'] as $id=>$role) $q->execute([$id,'Pr
 $q->execute([4,'Prueba segundo administrador','recorder@browser.invalid',password_hash('Testing123!',PASSWORD_DEFAULT),'admin','active']);
 $pdo->exec("INSERT INTO parkings(id,slug,name) VALUES(1,'devioz','Prueba'); INSERT INTO spaces(id,parking_id,code,status) VALUES(1,1,'P01','reserved'); INSERT INTO vehicles(id,user_id,plate) VALUES(1,2,'ABC-123'); INSERT INTO reservations(id,user_id,parking_id,space_id,vehicle_id,starts_on,ends_on,status,amount,payment_status) VALUES(1,2,1,1,1,CURDATE(),DATE_ADD(CURDATE(),INTERVAL 1 MONTH),'confirmed',100,'pending')");
 $pdo->exec("INSERT INTO spaces(id,parking_id,code,status) VALUES(2,1,'P02','reserved'),(3,1,'P03','reserved'); INSERT INTO reservations(id,user_id,parking_id,space_id,vehicle_id,starts_on,ends_on,status,amount,payment_status) VALUES(2,2,1,2,1,CURDATE(),DATE_ADD(CURDATE(),INTERVAL 1 MONTH),'confirmed',100,'unpaid'),(3,2,1,3,1,CURDATE(),DATE_ADD(CURDATE(),INTERVAL 1 MONTH),'confirmed',100,'unpaid')");
+// Metadata only: a separate parking keeps the real recording/upload cases empty.
+// These entries deliberately do not claim a playable physical video file.
+$pdo->exec("INSERT INTO parkings(id,slug,name) VALUES(2,'recording-library','Biblioteca de prueba')");
+$libraryInsert = $pdo->prepare('INSERT INTO camera_recordings(public_id,parking_id,created_by,source_kind,format,state,duration_ms,byte_size,sha256,started_at,ended_at,created_at,updated_at) VALUES(?,2,4,\'webcam\',\'webm\',?,?,?,?,?,?,?,?)');
+$librarySeed = static function (int $number, string $start, int $duration, bool $ready = true) use ($libraryInsert): void {
+    $id = 'aaaa' . str_pad(dechex($number), 28, '0', STR_PAD_LEFT);
+    $started = new DateTimeImmutable($start, new DateTimeZone('America/Lima'));
+    $ended = $started->modify('+' . $duration . ' milliseconds')->format('Y-m-d H:i:s.v');
+    $libraryInsert->execute([$id, $ready ? 'ready' : 'pending', $ready ? $duration : null,
+        $ready ? 128 : 0, $ready ? hash('sha256', $id) : null, $started->format('Y-m-d H:i:s.v'),
+        $ready ? $ended : null, $start, $start]);
+};
+for ($libraryIndex = 1; $libraryIndex <= 25; $libraryIndex++) {
+    $librarySeed($libraryIndex, sprintf('2026-10-03 08:%02d:00', $libraryIndex - 1), 30000);
+}
+$librarySeed(26, '2026-10-03 08:59:30', 60000);
+$librarySeed(27, '2026-10-04 09:15:00', 60000);
+$librarySeed(28, '2026-10-04 23:59:30', 60000);
+$librarySeed(29, '2026-10-05 08:00:00', 60000);
+$librarySeed(30, '2026-10-03 08:30:00', 30000, false);
 $filename='browser_'.bin2hex(random_bytes(6)).'.pdf';
 file_put_contents($root.'/backend/uploads/comprobantes/'.$filename,"%PDF-1.4\n%%EOF\n");
 $q=$pdo->prepare("INSERT INTO payments(id,reservation_id,amount,method,voucher_path,status) VALUES(1,1,100,'yape',?,'pending')");

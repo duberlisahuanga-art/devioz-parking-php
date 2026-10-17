@@ -35,6 +35,7 @@ render_page_start('Cámaras', 'camaras');
         <button type="button" data-camera-action="grid"><i class="bi bi-grid"></i> Vista 2x2</button>
         <button type="button" data-camera-action="single"><i class="bi bi-square"></i> Vista individual</button>
         <button type="button" data-camera-action="webcam"><i class="bi bi-laptop" aria-hidden="true"></i> Cámara de este equipo</button>
+        <button type="button" data-camera-action="recordings"><i class="bi bi-calendar3" aria-hidden="true"></i> Ver grabaciones</button>
         <button type="button" data-camera-action="audio" aria-pressed="false"><i class="bi bi-volume-mute"></i> Audio global: silenciado</button>
         <button type="button" data-camera-action="fullscreen"><i class="bi bi-arrows-fullscreen"></i> Pantalla completa</button>
         <button type="button" data-camera-action="manage"><i class="bi bi-sliders2"></i> Gestión / Configuración</button>
@@ -117,12 +118,38 @@ render_page_start('Cámaras', 'camaras');
         </div>
         <section class="camera-hmi-panel camera-recordings-panel" aria-labelledby="camera-recordings-title">
             <div class="camera-recordings-heading">
-                <div><h3 id="camera-recordings-title">Grabaciones guardadas</h3><p>Vídeos de prueba de este estacionamiento, disponibles después de recargar la página.</p></div>
+                <div><h3 id="camera-recordings-title">Grabaciones guardadas</h3><p>Elige un día y una hora para encontrar y reproducir tus vídeos.</p></div>
                 <button type="button" data-recording-action="refresh"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Actualizar grabaciones</button>
             </div>
+            <p class="camera-library__note">Horas de Lima. Se muestran únicamente los fragmentos guardados; los intervalos sin vídeos no tienen grabación disponible.</p>
             <p data-recordings-feedback role="status" aria-live="polite"></p>
-            <p class="camera-recordings-empty" data-recordings-empty>Aún no hay grabaciones guardadas.</p>
-            <div class="camera-recordings-list" data-recordings-list></div>
+            <div class="camera-library__layout">
+                <section class="camera-library__calendar" aria-labelledby="camera-recordings-month-title">
+                    <div class="camera-library__month-controls">
+                        <button type="button" data-recording-action="previous-month" aria-label="Mes anterior"><i class="bi bi-chevron-left" aria-hidden="true"></i></button>
+                        <label for="camera-recordings-month">Mes de grabaciones<input type="month" id="camera-recordings-month" data-recordings-month></label>
+                        <button type="button" data-recording-action="next-month" aria-label="Mes siguiente"><i class="bi bi-chevron-right" aria-hidden="true"></i></button>
+                    </div>
+                    <h4 id="camera-recordings-month-title" data-recordings-month-title>Calendario de grabaciones</h4>
+                    <div class="camera-library__weekdays" aria-hidden="true"><span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span></div>
+                    <div class="camera-library__days" data-recordings-days role="group" aria-label="Días del mes"></div>
+                    <p class="camera-library__calendar-status" data-recordings-calendar-status role="status" aria-live="polite"></p>
+                    <p class="camera-webcam-error" data-recordings-calendar-error role="alert" hidden></p>
+                </section>
+                <section class="camera-library__detail" aria-labelledby="camera-recordings-selected-date">
+                    <h4 id="camera-recordings-selected-date" data-recordings-selected-date>Selecciona un día</h4>
+                    <p class="camera-library__hours-label" id="camera-recordings-hours-label">Filtrar por hora</p>
+                    <div class="camera-library__hours" data-recordings-hours role="group" aria-labelledby="camera-recordings-hours-label"></div>
+                    <p class="camera-library__summary" data-recordings-summary role="status" aria-live="polite"></p>
+                    <p class="camera-recordings-empty" data-recordings-empty>Aún no hay grabaciones guardadas.</p>
+                    <div class="camera-recordings-list" data-recordings-list></div>
+                    <nav class="camera-library__pagination" data-recordings-pagination aria-label="Páginas de grabaciones" hidden>
+                        <button type="button" data-recording-action="previous-page">Anterior</button>
+                        <span data-recordings-page aria-live="polite"></span>
+                        <button type="button" data-recording-action="next-page">Siguiente</button>
+                    </nav>
+                </section>
+            </div>
             <div class="camera-recordings-player" data-recordings-player hidden>
                 <h4 data-recordings-player-title>Grabación seleccionada</h4>
                 <video data-recordings-video controls playsinline preload="metadata" aria-label="Reproducción de la grabación guardada"></video>

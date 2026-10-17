@@ -1,17 +1,11 @@
 const { test, expect } = require('@playwright/test');
 const AxeBuilder = require('@axe-core/playwright').default;
+const { isolateCameraTest } = require('./camera-test-scope');
 
 const cameraPath = '/devioz-parking-php/frontend/admin/camaras.php';
 const action = (page, name) => page.locator(`[data-camera-action="${name}"]`).filter({ visible: true });
 
-test.beforeEach(async ({ page }) => {
-  // The fixture-scoping header belongs to our PHP server, never public CDN requests.
-  await page.route('https://cdn.jsdelivr.net/**', async route => {
-    const headers = { ...route.request().headers() };
-    delete headers['x-devioz-test-scope'];
-    await route.continue({ headers });
-  });
-});
+test.beforeEach(async ({ page }, testInfo) => isolateCameraTest(page, testInfo));
 
 async function login(page, user = 'admin') {
   await page.goto('/devioz-parking-php/frontend/login.php');

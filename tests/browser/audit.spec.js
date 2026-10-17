@@ -8,15 +8,23 @@ test('auditoría: filtros, detalle, teclado y temas', async ({ page }, testInfo)
   await page.getByRole('button', { name: 'Ingresar', exact: true }).click();
   await expect(page).toHaveURL(/dashboard\.php/);
   await page.goto('/devioz-parking-php/frontend/admin/auditoria.php');
+  await expect(page.locator('[data-audit-filters]')).not.toHaveAttribute('open', '');
+  await expect(page.locator('table').first().locator('thead th')).toHaveText(['Fecha', 'Usuario', 'Acción', 'Descripción']);
   await page.getByLabel('Módulo', { exact: true }).fill('Autenticacion');
   await page.getByLabel('Acción', { exact: true }).fill('Login');
   await page.getByRole('button', { name: 'Filtrar', exact: true }).click();
   await expect(page.locator('tbody tr').first()).toContainText('Login');
-  const summary = page.locator('summary').first();
+  const summary = page.locator('[data-audit-event] summary').first();
   await summary.focus();
   await page.keyboard.press('Enter');
-  await expect(page.locator('details').first()).toHaveAttribute('open', '');
-  await expect(page.locator('details').first()).toContainText('Autenticacion');
+  await expect(page.locator('[data-audit-event]').first()).toHaveAttribute('open', '');
+  await expect(page.locator('[data-audit-event]').first()).toContainText('Autenticacion');
+  await expect(page.locator('[data-audit-event]').first()).toContainText('Dirección IP de origen');
+  await page.getByText('Filtros avanzados', { exact: true }).click();
+  await page.getByLabel('Número de usuario', { exact: true }).fill('1');
+  await page.getByRole('button', { name: 'Filtrar', exact: true }).click();
+  await expect(page.locator('[data-audit-filters]')).toHaveAttribute('open', '');
+  await expect(page.getByLabel('Número de usuario', { exact: true })).toHaveValue('1');
   for (const theme of ['light', 'dark']) {
     await page.evaluate(value => { localStorage.setItem('devioz_theme', value); }, theme);
     await page.reload();

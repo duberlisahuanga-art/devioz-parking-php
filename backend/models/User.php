@@ -4,6 +4,13 @@ declare(strict_types=1);
 
 final class User
 {
+    public static function setStatus(int $id, string $status): void
+    {
+        $query = db()->prepare('UPDATE users SET status=:status, session_version=session_version+1,
+            updated_at=NOW() WHERE id=:id');
+        $query->execute(['status'=>$status, 'id'=>$id]);
+    }
+
     public static function updateProfile(int $id, string $name, string $email, ?string $phone): void
     {
         $stmt = db()->prepare('UPDATE users SET name=:name,email=:email,phone=:phone,updated_at=NOW() WHERE id=:id');

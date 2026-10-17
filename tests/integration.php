@@ -387,6 +387,79 @@ try {
     } catch (RateLimitException $error) {
         check(true,'solicitudes repetidas limitadas sin bloquear la cuenta');
     }
+    $_SESSION['user_id'] = 3;
+    $_SESSION['session_version'] = 0;
+    try {
+        AdminController::changeUserStatus(['user_id'=>'2','status'=>'inactive']);
+        check(false,'conductor no administra usuarios');
+    } catch (RuntimeException $error) {
+        check(http_response_code() === 403 && User::find(2)['status'] === 'active', 'conductor rechazado sin cambiar usuario');
+        http_response_code(200);
+    }
+    $_SESSION['user_id'] = 1;
+    rejected(fn() => AdminController::changeUserStatus(['user_id'=>'1','status'=>'inactive']), 'administrador no se desactiva a sí mismo');
+    rejected(fn() => AdminController::changeUserStatus(['user_id'=>'2','status'=>'deleted']), 'estado fuera de lista permitido rechazado');
+    rejected(fn() => AdminController::changeUserStatus(['user_id'=>'99999999','status'=>'inactive']), 'usuario inexistente rechazado');
+    $businessCounts = [];
+    foreach (['vehicles','reservations','payments'] as $table) $businessCounts[$table] = db()->query('SELECT COUNT(*) FROM ' . $table)->fetchColumn();
+    db()->prepare('INSERT INTO password_resets(user_id,token_hash,email,password_fingerprint,expires_at) VALUES (?,?,?,?,DATE_ADD(NOW(),INTERVAL 30 MINUTE))')
+        ->execute([2,hash('sha256','synthetic-status-token'),'driver@integration.invalid',hash('sha256',User::find(2)['password'])]);
+    AdminController::changeUserStatus(['user_id'=>'2','status'=>'inactive']);
+    check(User::find(2)['status'] === 'inactive' && (int)User::find(2)['session_version'] === 1, 'desactivación revoca sesiones');
+    check((int)db()->query('SELECT COUNT(*) FROM password_resets WHERE user_id=2')->fetchColumn() === 0, 'desactivación elimina recuperación pendiente');
+    $statusEvents = db()->query("SELECT COUNT(*) FROM audit_logs WHERE entity_type='User' AND entity_id=2 AND action='Usuario desactivado'")->fetchColumn();
+    AdminController::changeUserStatus(['user_id'=>'2','status'=>'inactive']);
+    check(db()->query("SELECT COUNT(*) FROM audit_logs WHERE entity_type='User' AND entity_id=2 AND action='Usuario desactivado'")->fetchColumn() === $statusEvents,
+        'reintento de desactivación no duplica auditoría ni versión');
+    rejected(fn() => AuthController::login(['email'=>'driver@integration.invalid','password'=>'Testing123!']), 'usuario inactivo no inicia sesión');
+    AdminController::changeUserStatus(['user_id'=>'2','status'=>'active']);
+    check(User::find(2)['status'] === 'active' && (int)User::find(2)['session_version'] === 2, 'reactivación conserva revocación de sesiones antiguas');
+    foreach ($businessCounts as $table=>$count) check(db()->query('SELECT COUNT(*) FROM ' . $table)->fetchColumn() === $count,
+        'activar/desactivar conserva ' . $table);
+    db()->exec('RENAME TABLE audit_logs TO audit_logs_unavailable');
+    try {
+        try {
+            AdminController::changeUserStatus(['user_id'=>'2','status'=>'inactive']);
+            check(false,'fallo de auditoría debe revertir estado');
+        } catch (PDOException $error) {
+            check(User::find(2)['status'] === 'active' && (int)User::find(2)['session_version'] === 2,
+                'fallo de auditoría revierte estado y revocación');
+        }
+    } finally { db()->exec('RENAME TABLE audit_logs_unavailable TO audit_logs'); }
+    $secondAdmin = User::create(['name'=>'Segundo admin','email'=>'second-admin@integration.invalid',
+        'password'=>password_hash('Testing123!',PASSWORD_DEFAULT),'role'=>'admin','status'=>'active']);
+    AdminController::changeUserStatus(['user_id'=>(string)$secondAdmin,'status'=>'inactive']);
+    check(User::find($secondAdmin)['status'] === 'inactive' && User::find(1)['status'] === 'active', 'se puede desactivar otro administrador conservando uno activo');
+    $_SESSION['user_id'] = 2;
+    check(current_user() === null, 'sesión antigua no revive tras reactivar la cuenta');
+    $thirdAdmin = User::create(['name'=>'Tercer admin','email'=>'third-admin@integration.invalid',
+        'password'=>password_hash('Testing123!',PASSWORD_DEFAULT),'role'=>'admin','status'=>'active']);
+    db()->exec("UPDATE users SET status='inactive' WHERE id=1");
+    db()->prepare("UPDATE users SET status='active',session_version=0 WHERE id=?")->execute([$secondAdmin]);
+    try {
+        $jobs = [];
+        $start = (string)(microtime(true)+1.0);
+        foreach ([[$secondAdmin,$thirdAdmin],[$thirdAdmin,$secondAdmin]] as [$actorId,$targetId]) {
+            $process = proc_open([PHP_BINARY,$root . '/tests/user-status-worker.php',(string)$actorId,(string)$targetId,$start],
+                [0=>['pipe','r'],1=>['pipe','w'],2=>['pipe','w']],$pipes,$root);
+            if (!is_resource($process)) throw new RuntimeException('No se inició carrera de administradores.');
+            fclose($pipes[0]);
+            $jobs[] = [$process,$pipes];
+        }
+        $outcomes = [];
+        foreach ($jobs as [$process,$pipes]) {
+            $outcomes[] = trim(stream_get_contents($pipes[1]));
+            $errors = stream_get_contents($pipes[2]);
+            fclose($pipes[1]); fclose($pipes[2]);
+            if (proc_close($process) !== 0) throw new RuntimeException('Falló carrera de administradores.');
+        }
+        sort($outcomes);
+        check($outcomes === ['ACCEPTED','DENIED'], 'dos administradores no pueden desactivarse mutuamente en paralelo');
+        check((int)db()->query("SELECT COUNT(*) FROM users WHERE role='admin' AND status='active'")->fetchColumn() === 1,
+            'concurrencia conserva exactamente un administrador activo');
+    } finally { db()->exec("UPDATE users SET status='active' WHERE id=1"); }
+    $_SESSION['user_id'] = 1;
+    $_SESSION['session_version'] = 0;
     echo $passed . " comprobaciones de integración correctas.\n";
 } finally {
     // El nombre se genera aquí, no proviene del usuario ni de DB_DATABASE.

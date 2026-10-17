@@ -10,6 +10,14 @@ class RateLimitException extends ValidationException
 {
 }
 
+class ExpenseValidationException extends ValidationException
+{
+    public function __construct(public readonly string $field, string $message)
+    {
+        parent::__construct($message);
+    }
+}
+
 function public_error_message(Throwable $error): string
 {
     if ($error instanceof ValidationException) {

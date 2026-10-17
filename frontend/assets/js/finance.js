@@ -15,6 +15,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const fill = (values, editing) => {
         form.reset();
+        form.querySelectorAll('[aria-invalid="true"]').forEach(field => {
+            field.removeAttribute('aria-invalid');
+            field.removeAttribute('aria-describedby');
+            field.classList.remove('is-invalid');
+        });
+        const previousError = document.getElementById('expenseValidationError');
+        if (previousError) previousError.hidden = true;
+        const previousHint = document.getElementById('expenseValidationHint');
+        if (previousHint) previousHint.hidden = true;
         form.elements.action.value = editing ? 'update_expense' : 'create_expense';
         form.elements.expense_id.value = editing ? (values.id || values.expense_id || '') : '';
         for (const key of ['category', 'concept', 'amount', 'expense_datetime', 'payment_method', 'description', 'other_detail']) {
@@ -78,6 +87,19 @@ document.addEventListener('DOMContentLoaded', () => {
     updateOther();
     if (data.reopen) {
         fill(data.form, data.form.action === 'update_expense');
-        bootstrap.Modal.getOrCreateInstance(document.getElementById('expenseModal')).show();
+        const modal = document.getElementById('expenseModal');
+        const error = document.getElementById('expenseValidationError');
+        if (error) error.hidden = false;
+        const hint = document.getElementById('expenseValidationHint');
+        if (hint) hint.hidden = false;
+        const invalidField = ['category','concept','amount','expense_datetime','payment_method','description','other_detail','voucher'].includes(data.errorField)
+            ? form.elements[data.errorField] : null;
+        if (invalidField) {
+            invalidField.classList.add('is-invalid');
+            invalidField.setAttribute('aria-invalid', 'true');
+            invalidField.setAttribute('aria-describedby', 'expenseValidationError');
+        }
+        modal.addEventListener('shown.bs.modal', () => (invalidField || error)?.focus(), { once: true });
+        bootstrap.Modal.getOrCreateInstance(modal).show();
     }
 });

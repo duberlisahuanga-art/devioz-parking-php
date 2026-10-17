@@ -460,6 +460,49 @@ try {
     } finally { db()->exec("UPDATE users SET status='active' WHERE id=1"); }
     $_SESSION['user_id'] = 1;
     $_SESSION['session_version'] = 0;
+    $_POST['csrf_token'] = csrf_token();
+    $validExpense = ['category'=>'Mantenimiento','concept'=>'Servicio sintético','description'=>'Descripción sintética',
+        'payment_method'=>'Efectivo','other_detail'=>'','amount'=>'25.50','expense_datetime'=>'2026-10-16T09:30'];
+    $expenseCount = (int)db()->query('SELECT COUNT(*) FROM expenses')->fetchColumn();
+    foreach ([
+        ['amount','0','monto entre'],['amount','1.234','máximo dos decimales'],['amount','100000000','99,999,999.99'],
+        ['amount','','Ingresa el monto'],['amount',['invalid'],'monto entre'],
+        ['expense_datetime','2026-02-30T10:00','fecha y hora válidas'],
+        ['expense_datetime','','Selecciona la fecha'],['expense_datetime',"2026-10-16\0",'fecha y hora válidas'],
+        ['concept','','Escribe el concepto'],['description','','Escribe la descripción'],
+        ['category','No existe','Selecciona una categoría'],['payment_method','No existe','Selecciona un método'],
+        ['concept',str_repeat('x',256),'255 caracteres'],['concept',['invalid'],'texto válido'],
+    ] as [$field,$value,$expected]) {
+        try {
+            FinanceController::createExpense([...$validExpense,$field=>$value]);
+            check(false,'egreso inválido debe rechazarse: ' . $field);
+        } catch (ExpenseValidationException $error) {
+            check($error->field === $field && str_contains(public_error_message($error),$expected),
+                'mensaje específico de egreso: ' . $field . ' / ' . $expected);
+        }
+    }
+    try {
+        FinanceController::createExpense([...$validExpense,'category'=>'Otros','other_detail'=>'']);
+        check(false,'Otros requiere detalle');
+    } catch (ExpenseValidationException $error) {
+        check($error->field === 'other_detail', 'Otros señala el campo a completar');
+    }
+    try {
+        FinanceController::createExpense($validExpense,['voucher'=>['error'=>UPLOAD_ERR_PARTIAL]]);
+        check(false,'carga parcial debe rechazarse');
+    } catch (ExpenseValidationException $error) {
+        check($error->field === 'voucher' && str_contains($error->getMessage(),'Vuelve a adjuntarlo'), 'comprobante indica cómo reintentar');
+    }
+    check((int)db()->query('SELECT COUNT(*) FROM expenses')->fetchColumn() === $expenseCount, 'datos inválidos no crean egresos');
+    FinanceController::createExpense($validExpense);
+    $expenseId = (int)db()->query('SELECT MAX(id) FROM expenses')->fetchColumn();
+    try {
+        FinanceController::updateExpense($expenseId,[...$validExpense,'amount'=>'-10']);
+        check(false,'edición inválida debe rechazarse');
+    } catch (ExpenseValidationException $error) {
+        check(Expense::find($expenseId)['amount'] === '25.50', 'edición inválida conserva importe original');
+    }
+    rejected(fn() => FinanceController::filters(['month'=>'2026-99']), 'mes inválido genera validación pública controlada');
     echo $passed . " comprobaciones de integración correctas.\n";
 } finally {
     // El nombre se genera aquí, no proviene del usuario ni de DB_DATABASE.

@@ -6,9 +6,10 @@ require_once __DIR__ . '/../../backend/bootstrap.php';
 require_once __DIR__ . '/../includes/layout.php';
 $user = require_admin();
 $error = null;
+$errorField = null;
 try {
     $filters = FinanceController::filters($_GET);
-} catch (InvalidArgumentException $e) {
+} catch (ValidationException $e) {
     $error = public_error_message($e);
     $filters = FinanceController::filters([]);
 }
@@ -18,22 +19,23 @@ $formData = [];
 $reopen = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        if ($error !== null) throw new InvalidArgumentException($error);
+        if ($error !== null) throw new ValidationException($error);
         verify_csrf();
         $action = $_POST['action'] ?? '';
         if ($action === 'create_expense') {
             FinanceController::createExpense($_POST, $_FILES);
         } elseif ($action === 'update_expense') {
             $id = filter_var($_POST['expense_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-            if ($id === false || $id === null) throw new InvalidArgumentException('Identificador inválido.');
+            if ($id === false || $id === null) throw new ValidationException('No se identificó el egreso a editar. Cierra el formulario y vuelve a abrirlo desde «Editar».');
             FinanceController::updateExpense($id, $_POST, $_FILES);
         } else {
-            throw new InvalidArgumentException('Acción inválida.');
+            throw new ValidationException('No se reconoció la operación. Cierra el formulario y vuelve a intentarlo.');
         }
         flash('success', $action === 'create_expense' ? 'Egreso registrado.' : 'Egreso actualizado.');
         redirect_to($return);
     } catch (Throwable $e) {
-        $error = $e instanceof PDOException ? 'No se pudo guardar el egreso. Revisa la migración y la conexión.' : public_error_message($e);
+        $error = public_error_message($e);
+        $errorField = $e instanceof ExpenseValidationException ? $e->field : null;
         foreach (['category', 'concept', 'amount', 'expense_datetime', 'payment_method', 'description', 'other_detail', 'expense_id', 'action'] as $key) {
             $formData[$key] = is_string($_POST[$key] ?? null) ? $_POST[$key] : '';
         }
@@ -45,7 +47,7 @@ try {
 } catch (PDOException $e) {
     error_log('Finanzas: ' . public_error_message($e));
     render_page_start('Finanzas', 'finanzas');
-    echo '<div class="alert alert-danger">No se pudo cargar Finanzas. Verifica la conexión y ejecuta la migración database/finance_expenses.sql.</div>';
+    echo '<div class="alert alert-danger">No se pudo cargar Finanzas. Inténtalo nuevamente o contacta al soporte.</div>';
     render_page_end();
     exit;
 }
@@ -78,7 +80,7 @@ render_page_start('Finanzas', 'finanzas');
         <p class="mb-0 text-secondary">Ingresos, egresos, balance e historial financiero.</p>
         <div class="d-flex gap-2">
             <a class="btn btn-outline-success" href="<?= h(app_url($return . '&export=csv')) ?>"><i class="bi bi-download me-1"></i>Exportar Excel (CSV)</a>
-            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#expenseModal" id="financeNewExpense"><i class="bi bi-plus-lg me-1"></i>Nuevo egreso</button>
+            <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#expenseModal" id="financeNewExpense"><i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Nuevo egreso</button>
         </div>
     </div>
     <?php if ($error): ?><div class="alert alert-danger" role="alert"><?= h($error) ?></div><?php endif; ?>
@@ -132,6 +134,10 @@ render_page_start('Finanzas', 'finanzas');
     <form method="post" enctype="multipart/form-data" action="<?= h(app_url($return)) ?>" id="financeExpenseForm">
         <div class="modal-header"><h2 class="modal-title fs-5" id="expenseModalTitle">Nuevo egreso</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
         <div class="modal-body">
+            <?php if ($reopen && $error): ?>
+                <div class="alert alert-danger" role="alert" id="expenseValidationError" tabindex="-1"><?= h($error) ?></div>
+                <p class="small text-secondary" id="expenseValidationHint">Revisa el dato indicado. Si habías seleccionado un comprobante nuevo, vuelve a adjuntarlo.</p>
+            <?php endif; ?>
             <?= csrf_field() ?><input type="hidden" name="action" value="create_expense"><input type="hidden" name="expense_id" value="">
             <div class="row g-3">
                 <div class="col-md-6"><label class="form-label" for="expenseCategory">Categoría *</label><select id="expenseCategory" name="category" class="form-select" required><option value="">Seleccionar</option><?php foreach (Expense::CATEGORIES as $category): ?><option><?= h($category) ?></option><?php endforeach; ?></select></div>
@@ -150,6 +156,6 @@ render_page_start('Finanzas', 'finanzas');
 </div></div></div>
 <div class="modal fade" id="financeDetailModal" tabindex="-1" aria-labelledby="financeDetailTitle" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="financeDetailTitle">Ver movimiento</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div><div class="modal-body"><dl class="row" id="financeDetailFields"></dl><button type="button" class="btn btn-outline-primary" id="financeDetailVoucher" data-bs-toggle="modal" data-bs-target="#financeVoucherModal" hidden>Ver comprobante</button></div><div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div></div></div></div>
 <div class="modal fade" id="financeVoucherModal" tabindex="-1" aria-labelledby="financeVoucherTitle" aria-hidden="true"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content"><div class="modal-header"><h2 class="modal-title fs-5" id="financeVoucherTitle">Comprobante</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div><div class="modal-body" id="financeVoucherContent"></div><div class="modal-footer"><a id="financeVoucherOpen" class="btn btn-outline-primary" target="_blank" rel="noopener noreferrer">Abrir archivo</a><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button></div></div></div></div>
-<script type="application/json" id="financeData"><?= json_encode(['movements' => $movements, 'form' => $formData, 'reopen' => $reopen], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) ?></script>
+<script type="application/json" id="financeData"><?= json_encode(['movements' => $movements, 'form' => $formData, 'reopen' => $reopen, 'errorField'=>$errorField], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) ?></script>
 <script src="<?= h(app_url('/frontend/assets/js/finance.js')) ?>" defer></script>
 <?php render_page_end(); ?>

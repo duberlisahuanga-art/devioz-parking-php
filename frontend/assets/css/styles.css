@@ -3926,3 +3926,41 @@ html[data-theme=dark] :is(.space-card.status-occupied,.reservation-space-card.st
 html[data-theme=dark] :is(.space-card.status-maintenance,.reservation-space-card.status-maintenance){background:#1e293b;color:#cbd5e1;border-color:#475569}
 @media(max-width:991px){.account-settings-shell{grid-template-columns:minmax(0,1fr)}.account-settings-nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr))}.account-settings-nav button{flex-direction:column;justify-content:center;padding:10px 5px;gap:5px;font-size:10px}}
 @media(max-width:575px){.account-settings-fields,.account-information,.account-theme-options{grid-template-columns:minmax(0,1fr)}.account-settings-full{grid-column:auto}.account-settings-body{padding:18px}.account-settings-nav{grid-template-columns:repeat(3,minmax(0,1fr))}.topbar{gap:8px}.topbar-actions{gap:6px}.topbar-left{gap:8px}.topbar-icon-btn{width:34px;height:34px;flex-basis:34px;font-size:15px}.notification-center{flex-basis:34px}.notification-panel{right:12px}.topbar-user{gap:0}.page-breadcrumb{font-size:9px}.page-description{display:none}.topbar .page-title{font-size:16px}.topbar .topbar-avatar{width:34px;height:34px}.topbar-menu-btn{width:34px;height:34px}}
+
+/* Cámaras: formularios según el tema compartido y visores de vídeo oscuros. */
+.camera-hmi{--camera-accent-ink:var(--primary);background:var(--surface);color:var(--text);border-color:var(--border);box-shadow:var(--shadow-sm)}
+.camera-hmi p,.camera-hmi small,.camera-hmi dt{color:var(--muted)}
+.camera-hmi-eyebrow,.camera-hmi output{color:var(--camera-accent-ink)}
+.camera-hmi input:not([type=hidden]):not([type=checkbox]):not([type=range]),.camera-hmi select{background:var(--surface-soft);color:var(--text);border-color:var(--border)}
+.camera-hmi input[type=range]{accent-color:var(--primary)}
+.camera-hmi button{background:var(--surface-soft);color:var(--text);border-color:var(--border);min-height:40px}
+.camera-hmi button:hover,.camera-hmi button[aria-pressed=true]{background:var(--accent-surface);border-color:var(--primary)}
+.camera-hmi button:focus-visible,.camera-hmi input:focus-visible,.camera-hmi select:focus-visible{outline-color:var(--primary)}
+.camera-hmi button:disabled{opacity:.55}
+.camera-hmi-panel{background:var(--surface-soft);border-color:var(--border)}
+.camera-settings-save,.camera-management-row{border-color:var(--border)}
+.camera-hmi .camera-hmi-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.camera-hmi .camera-hmi-primary:hover{background:var(--primary-dark);border-color:var(--primary-dark)}
+.camera-hmi .camera-settings-danger{background:#fef2f2;border-color:#fecaca;color:#991b1b}
+.camera-hmi .camera-settings-danger p{color:#991b1b}
+.camera-hmi .camera-settings-danger button{background:#991b1b;color:#fff;border-color:#991b1b}
+.camera-hmi .camera-settings-danger button:hover{background:#7f1d1d;border-color:#7f1d1d}
+.camera-monitor-shell,.camera-channel{color:#e5edf8}
+.camera-monitor-shell>header span,.camera-channel small,.camera-channel-overlay{color:#b2c1d8}
+.camera-channel button{background:#101d31;color:#e5edf8;border-color:#4b607f}
+.camera-channel button:hover{background:#203657;border-color:#60a5fa}
+.camera-channel button:focus-visible{outline-color:#93c5fd}
+.camera-webcam-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}
+.camera-webcam-stage{position:relative;aspect-ratio:16/9;min-height:220px;max-height:70dvh;overflow:hidden;border:1px solid #334155;border-radius:12px;background:#050a12}
+.camera-webcam-stage video{display:block;width:100%;height:100%;object-fit:contain}
+.camera-webcam-stage:fullscreen{width:100%;height:100dvh;max-height:none;aspect-ratio:auto;border:0;border-radius:0}
+.camera-webcam-summary{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 16px;margin-top:12px;font-size:12px}
+.camera-webcam-summary [data-camera-webcam-status]{font-weight:700}
+.camera-webcam-controls{align-items:stretch;flex-direction:column}
+.camera-webcam-controls button{text-align:left;min-height:44px}
+.camera-hmi .camera-webcam-error{padding:12px;border:1px solid #fecaca;border-radius:9px;background:#fef2f2;color:#991b1b;margin:14px 0 0;overflow-wrap:anywhere}
+html[data-theme=dark] .camera-hmi{--camera-accent-ink:#93c5fd}
+html[data-theme=dark] .camera-hmi .camera-settings-danger,html[data-theme=dark] .camera-hmi .camera-webcam-error{background:#321820;border-color:#6e2a3a;color:#fca5a5}
+html[data-theme=dark] .camera-hmi .camera-settings-danger p{color:#fca5a5}
+@media(max-width:1150px){.camera-webcam-layout{grid-template-columns:minmax(0,1fr)}.camera-webcam-controls{flex-direction:row}.camera-webcam-controls button{flex:1 1 180px}}
+@media(max-width:575px){.camera-hmi-toolbar>button{flex-grow:1}.camera-webcam-stage{min-height:180px}.camera-webcam-controls button{flex-basis:100%}.camera-hmi-panel{padding:16px}.camera-hmi-eyebrow{letter-spacing:.08em}}

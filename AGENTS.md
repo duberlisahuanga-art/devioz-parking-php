@@ -52,3 +52,21 @@ autorización para desplegar, conectarse a terceros o alterar datos reales.
 Consultar `docs/development-quality.md` para criterios de entrega, uso de
 skills y trabajo pendiente de producción. Los estándares son objetivos de
 verificación; su cumplimiento necesita evidencia por requisito.
+
+## Trabajo con Git y GitHub
+
+- El usuario autorizó trabajar con Git, crear un commit por cada mejora y subir
+  los commits al repositorio GitHub configurado en `origin`.
+- Revisar `git status`, `git diff` y `git log` antes de guardar cambios. Actualizar
+  referencias con `git fetch origin` y comprobar diferencias antes de publicar.
+- Agrupar cada mejora con su código, pruebas y documentación. Seleccionar archivos
+  explícitamente con `git add`; separar los cambios de archivos compartidos cuando
+  correspondan a mejoras distintas. Ejecutar las verificaciones pertinentes.
+- Mantener la rama de trabajo existente salvo indicación del usuario. Usar
+  `git push` sin forzar; usar `git merge` sólo cuando corresponda integrar trabajo
+  revisado. No fusionar automáticamente con `main`, reescribir historial ni
+  sobrescribir cambios ajenos para completar una subida.
+- Mantener credenciales, configuración privada, respaldos y archivos operativos
+  fuera de Git. El historial de código no sustituye el respaldo de MariaDB,
+  comprobantes ni grabaciones de cámaras.
+- Referencia práctica: `docs/git-workflow.md`.

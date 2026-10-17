@@ -103,6 +103,7 @@ require_once __DIR__ . '/models/Reservation.php';
 require_once __DIR__ . '/models/ReservationFilters.php';
 require_once __DIR__ . '/models/Payment.php';
 require_once __DIR__ . '/models/Camera.php';
+require_once __DIR__ . '/models/CameraRecording.php';
 require_once __DIR__ . '/models/AuditLog.php';
 
 require_once __DIR__ . '/auth/session.php';
@@ -113,6 +114,7 @@ require_once __DIR__ . '/services/RateLimiter.php';
 require_once __DIR__ . '/services/RecoveryMailer.php';
 require_once __DIR__ . '/services/PasswordRecoveryService.php';
 require_once __DIR__ . '/services/VoucherService.php';
+require_once __DIR__ . '/services/CameraRecordingService.php';
 
 require_once __DIR__ . '/controllers/AuthController.php';
 require_once __DIR__ . '/controllers/VehicleController.php';

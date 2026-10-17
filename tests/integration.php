@@ -35,7 +35,7 @@ function rejected(callable $call, string $name): void
 try {
     $schema = str_replace('devioz_parking', $database, file_get_contents($root . '/database/sql/schema.sql'));
     $admin->exec($schema);
-    foreach (['finance_expenses.sql', 'account_settings_notifications.sql', 'migrations/20261014_payment_integrity.sql', 'migrations/20261015_reservation_renewals.sql', 'migrations/20261015_password_recovery.sql'] as $path) {
+    foreach (['finance_expenses.sql', 'account_settings_notifications.sql', 'migrations/20261014_payment_integrity.sql', 'migrations/20261015_reservation_renewals.sql', 'migrations/20261015_password_recovery.sql', 'migrations/20261016_camera_recordings.sql'] as $path) {
         $admin->exec(str_replace('devioz_parking', $database, file_get_contents($root . '/database/' . $path)));
     }
     putenv('DB_HOST=' . $host);

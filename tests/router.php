@@ -14,6 +14,7 @@ $testScope = $_SERVER['HTTP_X_DEVIOZ_TEST_SCOPE'] ?? 'shared';
 if (!in_array($testScope, ['desktop', 'mobile'], true)) $testScope = 'shared';
 // Isolate browser projects; both still exercise the real, unchanged login limits.
 putenv('APP_STORAGE='.$root.'/backend/storage/'.$state['database'].'-limits-'.$testScope);
+putenv('CAMERA_RECORDINGS_PATH='.$root.'/backend/storage/'.$state['database'].'-recordings');
 $file=realpath($root.($path==='/'?'/index.php':$path));
 if (!$file || !str_starts_with($file,$root.DIRECTORY_SEPARATOR) || !is_file($file)) { http_response_code(404); exit; }
 if (pathinfo($file,PATHINFO_EXTENSION)==='php') { require $file; return; }

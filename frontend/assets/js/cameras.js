@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let webcamStream = null;
         let webcamRequest = 0;
         let webcamPending = false;
+        let recording = null;
         const message = (text) => { find('[data-camera-message]').textContent = text; };
         const element = (tag, className, text) => {
             const node = document.createElement(tag);
@@ -38,13 +39,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const connected = webcamConnected();
             const ready = connected && frameAvailable(webcamVideo);
             find('[data-camera-action="webcam-connect"]').disabled = webcamPending || connected;
-            find('[data-camera-action="webcam-disconnect"]').disabled = !webcamPending && !webcamStream;
-            find('[data-camera-action="webcam-play"]').disabled = !ready;
+            find('[data-camera-action="webcam-disconnect"]').disabled = recording?.isCapturing() || (!webcamPending && !webcamStream);
+            find('[data-camera-action="webcam-play"]').disabled = !ready || recording?.isCapturing();
             find('[data-camera-action="webcam-play"]').textContent = webcamVideo.paused ? 'Reproducir' : 'Pausar imagen';
             find('[data-camera-action="webcam-snapshot"]').disabled = !ready;
             find('[data-camera-action="webcam-fullscreen"]').disabled = !ready || !find('[data-camera-webcam-stage]').requestFullscreen;
             find('[data-camera-webcam-resolution]').textContent = ready
                 ? webcamVideo.videoWidth + ' × ' + webcamVideo.videoHeight : 'No disponible';
+            recording?.refreshAvailability();
         };
         const webcamStatus = (status, error = '') => {
             find('[data-camera-webcam-status]').textContent = status;
@@ -54,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
             updateWebcamControls();
         };
         const stopWebcam = (status = 'Desconectada', error = '') => {
+            recording?.handleSourceEnd();
             webcamRequest++;
             webcamPending = false;
             const stream = webcamStream;
@@ -421,6 +424,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (target.disabled) return;
             if (target.dataset.cameraTab) { tab(target.dataset.cameraTab); return; }
             const action = target.dataset.cameraAction;
+            if (currentView === 'webcam' && ['grid', 'single', 'manage', 'create', 'settings', 'back'].includes(action)
+                && recording?.preventLeaving()) return;
             if (action === 'grid') renderGrid();
             else if (action === 'webcam') {
                 destroyPlayers();
@@ -490,7 +495,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 message('Prueba del endpoint guardado iniciada en el navegador.');
             }
         });
-        parking.addEventListener('change', () => { selected = null; renderGrid(); });
+        let previousParking = parking.value;
+        parking.addEventListener('change', () => {
+            if (recording?.preventLeaving()) { parking.value = previousParking; return; }
+            previousParking = parking.value;
+            selected = null; renderGrid();
+        });
         form.addEventListener('input', (event) => {
             if (['brightness', 'contrast', 'saturation'].includes(event.target.name)) {
                 find('[data-camera-output="' + event.target.name + '"]').textContent = event.target.value + '%';
@@ -534,7 +544,25 @@ document.addEventListener('DOMContentLoaded', () => {
         webcamVideo.addEventListener('error', () => {
             if (webcamStream) stopWebcam('Sin señal', 'No se pudo mostrar la imagen. Vuelve a conectar la cámara.');
         });
-        window.addEventListener('pagehide', () => { clearInterval(clockTimer); stopWebcam(); destroyPlayers(); });
+        recording = new window.DeviozWebcamRecorder({
+            root, getStream: () => webcamStream,
+            isReady: () => webcamConnected() && frameAvailable(webcamVideo) && !webcamVideo.paused,
+            onStateChange: updateWebcamControls
+        });
+        document.addEventListener('click', (event) => {
+            const link = event.target.closest('a[href]');
+            if (!link || link.hasAttribute('download') || link.target === '_blank' || event.ctrlKey || event.metaKey) return;
+            const url = new URL(link.href, location.href);
+            if (url.origin === location.origin && url.pathname === location.pathname && url.search === location.search) return;
+            if (recording.preventLeaving()) event.preventDefault();
+        }, true);
+        window.addEventListener('beforeunload', (event) => {
+            if (recording.hasPendingWork()) { event.preventDefault(); event.returnValue = ''; }
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) recording.handleSourceEnd('La pestaña dejó de estar visible.');
+        });
+        window.addEventListener('pagehide', () => { clearInterval(clockTimer); recording.dispose(); stopWebcam(); destroyPlayers(); });
         window.addEventListener('pageshow', (event) => {
             if (event.persisted) window.location.reload();
         });

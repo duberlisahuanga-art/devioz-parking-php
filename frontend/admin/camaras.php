@@ -23,7 +23,7 @@ $cameras = CameraController::index();
 $parkings = Parking::allWithStats();
 render_page_start('Cámaras', 'camaras');
 ?>
-<div class="camera-hmi" data-camera-module>
+<div class="camera-hmi" data-camera-module data-recordings-endpoint="<?= h(app_url('/frontend/admin/grabaciones.php')) ?>" data-recordings-csrf="<?= h(csrf_token()) ?>">
     <script type="application/json" data-camera-data><?= json_encode($cameras, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) ?></script>
     <header class="camera-hmi-heading">
         <div><span class="camera-hmi-eyebrow">VIDEOVIGILANCIA · DVR / 4 CANALES</span><h2>Centro de monitoreo</h2><p>Canales del DVR y prueba con la cámara de este equipo.</p></div>
@@ -79,7 +79,7 @@ render_page_start('Cámaras', 'camaras');
                 <p class="camera-webcam-error" data-camera-webcam-error role="alert" hidden></p>
             </div>
             <aside class="camera-hmi-panel">
-                <h3>Controles de prueba</h3>
+                <h3>Controles de cámara</h3>
                 <div class="camera-hmi-toolbar camera-webcam-controls">
                     <button type="button" class="camera-hmi-primary" data-camera-action="webcam-connect">Conectar cámara</button>
                     <button type="button" data-camera-action="webcam-disconnect" disabled>Desconectar cámara</button>
@@ -88,10 +88,46 @@ render_page_start('Cámaras', 'camaras');
                     <button type="button" data-camera-action="webcam-fullscreen" disabled>Ampliar imagen</button>
                 </div>
                 <p>Al conectar, permite el acceso a la cámara. Si otra aplicación la utiliza, ciérrala y vuelve a intentar.</p>
-                <p>Capturar imagen descarga una fotografía en este equipo. Esta etapa todavía no graba ni guarda vídeos.</p>
-                <p>Al salir de esta vista o cerrar la página se desconecta la cámara. Para usarla desde otro equipo, la página necesita HTTPS.</p>
+                <p>Capturar imagen descarga una fotografía. Durante la grabación se bloquean la pausa y la desconexión: utiliza Detener y guardar.</p>
+                <div class="camera-recording-controls" aria-labelledby="camera-recording-title">
+                    <h3 id="camera-recording-title">Grabar vídeo</h3>
+                    <div class="camera-recording-summary">
+                        <span data-recording-status role="status" aria-live="polite">Sin grabación en curso</span>
+                        <span class="camera-recording-timer" data-recording-timer aria-label="Duración de la grabación">00:00</span>
+                    </div>
+                    <p data-recording-limits>Hasta 2 minutos y 20 MB por vídeo.</p>
+                    <div class="camera-hmi-toolbar camera-webcam-controls">
+                        <button type="button" class="camera-hmi-primary" data-recording-action="start" disabled><i class="bi bi-record-circle" aria-hidden="true"></i> Iniciar grabación</button>
+                        <button type="button" data-recording-action="stop" disabled><i class="bi bi-stop-circle" aria-hidden="true"></i> Detener y guardar</button>
+                        <button type="button" data-recording-action="retry" hidden>Reintentar guardado</button>
+                        <button type="button" data-recording-action="download-local" hidden>Descargar copia</button>
+                    </div>
+                    <p class="camera-webcam-error" data-recording-error role="alert" hidden></p>
+                    <p class="camera-recording-progress" data-recording-progress role="status" aria-live="polite" hidden></p>
+                    <video class="camera-recording-preview" data-recording-local-preview controls playsinline preload="metadata" aria-label="Vista previa de la grabación sin guardar" hidden></video>
+                    <details class="camera-recording-discard" data-recording-discard hidden>
+                        <summary>Descartar grabación sin guardar</summary>
+                        <p>Se eliminará la grabación pendiente. Descarga una copia si deseas conservarla.</p>
+                        <button type="button" data-recording-action="discard">Sí, descartar grabación</button>
+                    </details>
+                </div>
+                <p>Mantén esta pestaña visible al grabar. Al ocultarla se detendrá el vídeo y se intentará guardarlo. Espera la confirmación antes de cerrar.</p>
+                <p>Esta prueba depende de la cámara y del navegador de este equipo. Para acceder desde otro equipo, la página necesita HTTPS.</p>
             </aside>
         </div>
+        <section class="camera-hmi-panel camera-recordings-panel" aria-labelledby="camera-recordings-title">
+            <div class="camera-recordings-heading">
+                <div><h3 id="camera-recordings-title">Grabaciones guardadas</h3><p>Vídeos de prueba de este estacionamiento, disponibles después de recargar la página.</p></div>
+                <button type="button" data-recording-action="refresh"><i class="bi bi-arrow-clockwise" aria-hidden="true"></i> Actualizar grabaciones</button>
+            </div>
+            <p data-recordings-feedback role="status" aria-live="polite"></p>
+            <p class="camera-recordings-empty" data-recordings-empty>Aún no hay grabaciones guardadas.</p>
+            <div class="camera-recordings-list" data-recordings-list></div>
+            <div class="camera-recordings-player" data-recordings-player hidden>
+                <h4 data-recordings-player-title>Grabación seleccionada</h4>
+                <video data-recordings-video controls playsinline preload="metadata" aria-label="Reproducción de la grabación guardada"></video>
+            </div>
+        </section>
     </section>
     <section data-camera-view="manage" hidden>
         <div class="camera-hmi-toolbar"><button type="button" data-camera-action="grid">← Volver a 2x2</button><button type="button" data-camera-action="create">Nueva cámara</button></div>
@@ -158,5 +194,6 @@ render_page_start('Cámaras', 'camaras');
     <noscript>Activa JavaScript para utilizar el centro de monitoreo.</noscript>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.13/dist/hls.min.js" crossorigin="anonymous"></script>
-<script src="<?= h(app_url('/frontend/assets/js/cameras.js')) ?>" defer></script>
+<script src="<?= h(app_url('/frontend/assets/js/webcam-recording.js')) ?>?v=<?= h((string) filemtime(__DIR__ . '/../assets/js/webcam-recording.js')) ?>" defer></script>
+<script src="<?= h(app_url('/frontend/assets/js/cameras.js')) ?>?v=<?= h((string) filemtime(__DIR__ . '/../assets/js/cameras.js')) ?>" defer></script>
 <?php render_page_end(); ?>

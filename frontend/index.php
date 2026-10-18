@@ -5,6 +5,12 @@ declare(strict_types=1);
 require_once __DIR__ . '/../backend/bootstrap.php';
 
 $authenticated = is_authenticated();
+$sessionName = htmlspecialchars(
+    $authenticated ? (string) (current_user()['name'] ?? 'Usuario') : '',
+    ENT_QUOTES,
+    'UTF-8'
+);
+$logoutUrl = htmlspecialchars(app_url('/backend/auth/logout.php'), ENT_QUOTES, 'UTF-8');
 $panelUrl = htmlspecialchars(app_url(is_admin()
     ? '/frontend/admin/dashboard.php'
     : '/frontend/conductor/dashboard.php'), ENT_QUOTES, 'UTF-8');
@@ -260,6 +266,54 @@ $authMode = (
             align-items: center;
 
             gap: 12px;
+        }
+
+        .landing-session {
+            display: grid;
+            gap: 4px;
+            max-width: 280px;
+            text-align: right;
+        }
+
+        .landing-session-label {
+            margin: 0;
+            color: #475569;
+            font-size: .75rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .landing-session-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .landing-session-actions form,
+        .landing-mobile-auth form {
+            margin: 0;
+        }
+
+        .landing-mobile-auth .landing-session-label {
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
+        .landing-session-actions .btn-auth-link,
+        .landing-mobile-auth .btn-auth-link {
+            min-height: 44px;
+        }
+
+        .landing-session-actions .btn-auth-link,
+        .landing-mobile-auth form .btn-auth-link {
+            color: #475569;
+        }
+
+        .landing-session-actions .btn-auth-link:hover,
+        .landing-mobile-auth form .btn-auth-link:hover {
+            color: var(--landing-primary);
         }
 
 
@@ -1916,7 +1970,18 @@ $authMode = (
             <div class="landing-auth-actions">
 
                 <?php if ($authenticated): ?>
-                    <a class="btn-auth-primary" href="<?= $panelUrl ?>">Ir a mi panel</a>
+                    <div class="landing-session" data-landing-session>
+                        <p class="landing-session-label" title="<?= $sessionName ?>">
+                            Sesión iniciada: <strong><?= $sessionName ?></strong>
+                        </p>
+                        <div class="landing-session-actions">
+                            <a class="btn-auth-primary" href="<?= $panelUrl ?>">Ir a mi panel</a>
+                            <form method="post" action="<?= $logoutUrl ?>">
+                                <?= csrf_field() ?>
+                                <button type="submit" class="btn-auth-link">Cerrar sesión</button>
+                            </form>
+                        </div>
+                    </div>
                 <?php else: ?>
 
                 <button
@@ -1984,7 +2049,14 @@ $authMode = (
                 <div class="landing-mobile-auth">
 
                     <?php if ($authenticated): ?>
+                        <p class="landing-session-label" data-landing-session>
+                            Sesión iniciada: <strong><?= $sessionName ?></strong>
+                        </p>
                         <a class="btn-auth-primary" href="<?= $panelUrl ?>">Ir a mi panel</a>
+                        <form method="post" action="<?= $logoutUrl ?>">
+                            <?= csrf_field() ?>
+                            <button type="submit" class="btn-auth-link text-start">Cerrar sesión</button>
+                        </form>
                     <?php else: ?>
 
                     <button

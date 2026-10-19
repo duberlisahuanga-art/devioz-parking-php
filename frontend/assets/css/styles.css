@@ -4030,3 +4030,30 @@ html[data-theme=dark] .camera-hmi .camera-settings-danger p{color:#fca5a5}
 .camera-hmi .camera-library__pagination button{min-height:44px}
 @media(max-width:1199px){.camera-library__layout{grid-template-columns:minmax(0,1fr)}.camera-library__calendar{width:100%;max-width:460px}.camera-hmi .camera-library__day{min-height:60px}}
 @media(max-width:575px){.camera-library__layout{gap:22px;margin-top:16px}.camera-library__calendar{padding:12px}.camera-library__month-controls{gap:6px}.camera-hmi .camera-library__month-controls button{flex-basis:40px;width:40px}.camera-hmi .camera-library__month-controls input{padding:8px 6px;font-size:12px}.camera-library__weekdays,.camera-library__days{gap:3px}.camera-library__weekdays{font-size:10px}.camera-hmi .camera-library__day{min-height:52px}.camera-library__day-count{font-size:9px}.camera-library__hours{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.camera-library__pagination{gap:8px}.camera-library__pagination span{order:-1;width:100%;text-align:center}.camera-hmi .camera-library__pagination button{flex:1}}
+
+/* Fragmentos: selección del intervalo, exportación y descarga del archivo. */
+.camera-hmi .camera-clip-editor{min-width:0;margin-top:20px;padding:18px;border:1px solid var(--border);border-radius:12px;background:var(--surface)}
+.camera-hmi .camera-clip-editor h5{margin:0 0 10px;font-size:15px;font-weight:700;line-height:1.5}
+.camera-hmi .camera-clip-editor p{overflow-wrap:anywhere}
+.camera-hmi .camera-clip-source{margin:0 0 16px;color:var(--text);font-variant-numeric:tabular-nums}
+.camera-hmi .camera-clip-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:16px 0}
+.camera-hmi .camera-clip-field{min-width:0}
+.camera-hmi .camera-clip-field label{margin:0;font-weight:700}
+.camera-hmi .camera-clip-field input{min-height:44px;font-variant-numeric:tabular-nums}
+.camera-hmi .camera-clip-field input::placeholder{color:var(--muted);opacity:1}
+.camera-hmi .camera-clip-field input[aria-invalid=true]{border-color:#b91c1c}
+.camera-hmi .camera-clip-field button{width:100%;min-height:44px;margin-top:8px;white-space:normal}
+.camera-hmi .camera-clip-original{margin:0 0 16px;color:var(--text)}
+.camera-hmi .camera-clip-actions{display:flex;flex-wrap:wrap;align-items:stretch;gap:10px}
+.camera-hmi .camera-clip-actions button{min-height:44px;white-space:normal}
+.camera-hmi .camera-clip-status{margin:14px 0 0;color:var(--text)}
+.camera-hmi .camera-clip-result{min-width:0;margin-top:20px;padding-top:18px;border-top:1px solid var(--border)}
+.camera-hmi .camera-clip-result h6{margin:0;font-size:14px;font-weight:700;line-height:1.5}
+.camera-hmi .camera-clip-result video{max-height:55dvh;margin-bottom:14px}
+.camera-hmi .camera-clip-download{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;padding:9px 12px;border:1px solid var(--primary);border-radius:9px;background:var(--primary);color:#fff;font-size:12px;line-height:1.5;text-decoration:none}
+.camera-hmi .camera-clip-download:hover{background:var(--primary-dark);border-color:var(--primary-dark);color:#fff}
+.camera-hmi .camera-clip-download:focus-visible{outline:2px solid var(--primary);outline-offset:3px}
+.camera-hmi .camera-clip-result [data-clip-share-status]{margin:14px 0 0;color:var(--text)}
+.camera-hmi .camera-clip-share-help{margin:12px 0 0}
+html[data-theme=dark] .camera-hmi .camera-clip-field input[aria-invalid=true]{border-color:#fca5a5}
+@media(max-width:575px){.camera-hmi .camera-clip-editor{padding:14px}.camera-hmi .camera-clip-fields{grid-template-columns:minmax(0,1fr);gap:18px}.camera-hmi .camera-clip-actions>*{flex:1 1 100%;text-align:center}.camera-hmi .camera-clip-result video{max-height:45dvh}}

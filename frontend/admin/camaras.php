@@ -153,6 +153,43 @@ render_page_start('Cámaras', 'camaras');
             <div class="camera-recordings-player" data-recordings-player hidden>
                 <h4 data-recordings-player-title>Grabación seleccionada</h4>
                 <video data-recordings-video controls playsinline preload="metadata" aria-label="Reproducción de la grabación guardada"></video>
+                <section class="camera-clip-editor" data-clip-editor aria-labelledby="camera-clip-editor-title" hidden>
+                    <h5 id="camera-clip-editor-title">Recortar y exportar</h5>
+                    <p class="camera-clip-source" data-clip-source-info role="status" aria-live="polite"></p>
+                    <form data-clip-form novalidate>
+                        <p id="camera-clip-format-help">Indica el inicio y el fin en minutos:segundos, con décimas. Por ejemplo, 00:12.5 corresponde a 12 segundos y medio.</p>
+                        <div class="camera-clip-fields">
+                            <div class="camera-clip-field">
+                                <label for="camera-clip-start">Inicio (minutos:segundos)</label>
+                                <input type="text" id="camera-clip-start" data-clip-start inputmode="decimal" value="00:00.0" placeholder="00:00.0" maxlength="14" autocomplete="off" spellcheck="false" required aria-describedby="camera-clip-format-help">
+                                <button type="button" data-clip-action="mark-start" disabled>Usar posición actual como inicio</button>
+                            </div>
+                            <div class="camera-clip-field">
+                                <label for="camera-clip-end">Fin (minutos:segundos)</label>
+                                <input type="text" id="camera-clip-end" data-clip-end inputmode="decimal" value="00:00.0" placeholder="00:00.0" maxlength="14" autocomplete="off" spellcheck="false" required aria-describedby="camera-clip-format-help">
+                                <button type="button" data-clip-action="mark-end" disabled>Usar posición actual como fin</button>
+                            </div>
+                        </div>
+                        <p id="camera-clip-original-help" class="camera-clip-original">El vídeo original se conserva. Se generará un archivo MP4 con el intervalo seleccionado.</p>
+                        <div class="camera-clip-actions">
+                            <button type="button" data-clip-action="preview-selection" disabled>Ver selección</button>
+                            <button type="submit" class="camera-hmi-primary" data-clip-action="export" aria-describedby="camera-clip-original-help" disabled><i class="bi bi-scissors" aria-hidden="true"></i> Generar MP4</button>
+                        </div>
+                    </form>
+                    <p class="camera-webcam-error" data-clip-error role="alert" hidden></p>
+                    <p class="camera-clip-status" data-clip-status role="status" aria-live="polite">Selecciona un vídeo guardado para recortarlo.</p>
+                    <section class="camera-clip-result" data-clip-result aria-labelledby="camera-clip-result-title" hidden>
+                        <h6 id="camera-clip-result-title">Fragmento preparado</h6>
+                        <video data-clip-video controls playsinline preload="metadata" aria-label="Vista previa del fragmento"></video>
+                        <div class="camera-clip-actions">
+                            <a class="camera-clip-download" data-clip-download download><i class="bi bi-download" aria-hidden="true"></i> Descargar MP4</a>
+                            <button type="button" data-clip-action="prepare-share">Preparar para compartir</button>
+                            <button type="button" data-clip-action="share" hidden><i class="bi bi-share" aria-hidden="true"></i> Compartir archivo</button>
+                        </div>
+                        <p data-clip-share-status role="status" aria-live="polite"></p>
+                        <p class="camera-clip-share-help">Si tu navegador no permite compartir archivos, descarga el MP4 y adjúntalo en WhatsApp u otra aplicación.</p>
+                    </section>
+                </section>
             </div>
         </section>
     </section>

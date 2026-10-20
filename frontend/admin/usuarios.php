@@ -21,6 +21,9 @@ $pageHasNext = count($users) > 50;
 $users = array_slice($users,0,50);
 render_page_start('Usuarios', 'usuarios');
 ?>
+<div class="d-flex justify-content-end mb-3">
+    <a class="btn btn-primary" href="<?= h(app_url('/frontend/admin/nuevo-administrador.php')) ?>">Nuevo administrador</a>
+</div>
 <div class="row g-3 mb-4">
     <div class="col-6 col-lg-3"><div class="mini-stat"><span>Total</span><strong><?= h($summary['total'] ?? 0) ?></strong></div></div>
     <div class="col-6 col-lg-3"><div class="mini-stat"><span>Administradores</span><strong><?= h($summary['admins'] ?? 0) ?></strong></div></div>

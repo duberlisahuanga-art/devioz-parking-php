@@ -4,6 +4,71 @@ declare(strict_types=1);
 
 final class AdminController
 {
+    public static function createAdministrator(array $input): int
+    {
+        $admin = require_admin();
+        foreach (['name', 'email', 'password', 'password_confirmation'] as $field) {
+            if (!is_string($input[$field] ?? null)) {
+                throw new ValidationException('Completa nombre, correo y ambas contraseñas.');
+            }
+        }
+        $name = trim($input['name']);
+        $email = strtolower(trim($input['email']));
+        if (
+            $name === '' || !mb_check_encoding($name, 'UTF-8')
+            || mb_strlen($name) > 150 || str_contains($name, "\0")
+        ) {
+            throw new ValidationException('Ingresa un nombre válido de hasta 150 caracteres.');
+        }
+        if (strlen($email) > 150 || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new ValidationException('Ingresa un correo electrónico válido de hasta 150 caracteres.');
+        }
+        validate_password($input['password']);
+        if ($input['password'] !== $input['password_confirmation']) {
+            throw new ValidationException('Las contraseñas no coinciden. Vuelve a escribirlas.');
+        }
+        $hash = password_hash($input['password'], PASSWORD_DEFAULT);
+        try {
+            return transaction(function () use ($admin, $name, $email, $hash): int {
+                $query = db()->prepare('SELECT role,status,session_version FROM users WHERE id=:id FOR UPDATE');
+                $query->execute(['id' => $admin['id']]);
+                $actor = $query->fetch();
+                if (
+                    !$actor || $actor['role'] !== 'admin' || $actor['status'] !== 'active'
+                    || (int) $actor['session_version'] !== (int) ($_SESSION['session_version'] ?? 0)
+                ) {
+                    throw new ValidationException('Tu sesión ya no permite crear administradores. Inicia sesión nuevamente.');
+                }
+                if (User::findByEmail($email)) {
+                    throw new ValidationException('El correo ya está registrado. Utiliza otro correo electrónico.');
+                }
+                $id = User::create([
+                    'name' => $name,
+                    'email' => $email,
+                    'password' => $hash,
+                    'role' => 'admin',
+                    'status' => 'active',
+                ]);
+                AuditService::log(
+                    'Usuarios',
+                    'Administrador creado',
+                    'Se creó una cuenta con acceso administrativo completo.',
+                    'User',
+                    $id,
+                    $email,
+                    ['created_user' => ['name' => $name, 'role' => 'admin', 'status' => 'active']],
+                    actor: $admin
+                );
+                return $id;
+            });
+        } catch (PDOException $error) {
+            if ((int) ($error->errorInfo[1] ?? 0) === 1062) {
+                throw new ValidationException('El correo ya está registrado. Utiliza otro correo electrónico.');
+            }
+            throw $error;
+        }
+    }
+
     public static function overview(): array
     {
         require_admin();

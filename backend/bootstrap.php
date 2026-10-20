@@ -108,6 +108,7 @@ require_once __DIR__ . '/models/AuditLog.php';
 
 require_once __DIR__ . '/auth/session.php';
 require_once __DIR__ . '/auth/permissions.php';
+require_once __DIR__ . '/auth/DriverContext.php';
 
 require_once __DIR__ . '/services/AuditService.php';
 require_once __DIR__ . '/services/RateLimiter.php';

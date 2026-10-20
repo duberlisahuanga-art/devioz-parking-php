@@ -33,6 +33,25 @@
   --shadow-lg: 0 18px 50px rgba(15, 23, 42, 0.10);
 }
 
+.driver-management-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 2px solid var(--primary);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--text);
+}
+.driver-management-banner > div { min-width: 0; overflow-wrap: anywhere; }
+.driver-management-banner .btn { min-height: 44px; }
+@media (max-width: 575px) {
+  .driver-management-banner .btn { width: 100%; }
+}
+
 /* ============================================================
    BASE
 ============================================================ */

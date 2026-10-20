@@ -370,6 +370,7 @@ function render_page_start(
 ): void {
 
     $user = require_auth();
+    $managedDriver = DriverContext::managed();
 
     $role = (string) (
         $user['role'] ?? 'driver'
@@ -377,7 +378,7 @@ function render_page_start(
 
     $roleLabel = role_label($role);
 
-    $items = menu_items($role);
+    $items = menu_items($managedDriver === null ? $role : 'driver');
 
     $userName = (string) (
         $user['name'] ?? 'Usuario Devioz'
@@ -391,7 +392,7 @@ function render_page_start(
 
     $description = page_description(
         $active,
-        $role
+        $managedDriver === null ? $role : 'driver'
     );
 
     ?>
@@ -528,7 +529,7 @@ function render_page_start(
                         ? 'active'
                         : '' ?>"
                     href="<?= h(
-                        app_url($url)
+                        DriverContext::url($url)
                     ) ?>"
                     <?= $active === $key
                         ? 'aria-current="page"'
@@ -694,6 +695,16 @@ function render_page_start(
         <!-- Área central -->
         <section class="content-wrap">
 
+            <?php if ($managedDriver !== null): ?>
+                <aside class="driver-management-banner" aria-label="Gestión de conductor" data-driver-management="<?= h($managedDriver['id']) ?>">
+                    <div>
+                        <strong>Gestionando a: <?= h($managedDriver['name']) ?></strong>
+                        <p class="mb-0">Operaciones registradas por: <?= h($userName) ?> (administrador).</p>
+                    </div>
+                    <a class="btn btn-outline-primary" href="<?= h(app_url('/frontend/admin/usuarios.php')) ?>">Volver a administración</a>
+                </aside>
+            <?php endif; ?>
+
             <?= flash_message() ?>
 
     <?php
@@ -806,5 +817,5 @@ function run_post_action(
         );
     }
 
-    redirect_to($redirect);
+    redirect_to(DriverContext::path($redirect));
 }

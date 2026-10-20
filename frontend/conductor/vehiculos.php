@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../backend/bootstrap.php';
 require_once __DIR__ . '/../includes/layout.php';
-require_driver();
+DriverContext::user();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? 'create');
@@ -18,8 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $vehicles = VehicleController::index();
 render_page_start('Mis vehículos', 'vehiculos');
 ?>
-<link rel="stylesheet" href="<?= h(app_url('/frontend/assets/css/vehicle-catalog.css')) ?>">
-<div class="row g-4"><div class="col-xl-4"><div class="panel-card"><div class="panel-heading"><div><h2>Registrar vehículo</h2><p>Agrega un vehículo a tu cuenta</p></div></div><form method="post" class="vstack gap-3" data-vehicle-catalog="<?= h(app_url('/frontend/api/vehicle-catalog.php')) ?>">
+<link rel="stylesheet" href="<?= h(DriverContext::url('/frontend/assets/css/vehicle-catalog.css')) ?>">
+<div class="row g-4"><div class="col-xl-4"><div class="panel-card"><div class="panel-heading"><div><h2>Registrar vehículo</h2><p>Agrega un vehículo a tu cuenta</p></div></div><form method="post" class="vstack gap-3" data-vehicle-catalog="<?= h(DriverContext::url('/frontend/api/vehicle-catalog.php')) ?>">
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="create">
     <div>
@@ -66,5 +66,5 @@ render_page_start('Mis vehículos', 'vehiculos');
         <i class="bi bi-car-front-fill"></i>
     <?php endif; ?>
 </div><div class="flex-grow-1"><h3 class="h5 mb-1"><?= h($v['plate']) ?></h3><div class="text-secondary small"><?= h(trim(($v['brand'] ?? '').' '.($v['model'] ?? '')) ?: 'Sin marca/modelo') ?></div><div class="small mt-2"><span class="me-3"><i class="bi bi-palette me-1"></i><?= h($v['color'] ?: '—') ?></span><span><i class="bi bi-tag me-1"></i><?= h($v['type']) ?></span></div></div><form method="post"><?= csrf_field() ?><input type="hidden" name="action" value="delete"><input type="hidden" name="vehicle_id" value="<?= h($v['id']) ?>"><button class="btn btn-sm btn-outline-danger" onclick="return confirm('¿Eliminar este vehículo?')"><i class="bi bi-trash"></i></button></form></div></div><?php endforeach; ?></div></div></div>
-<script src="<?= h(app_url('/frontend/assets/js/vehicle-catalog.js')) ?>" defer></script>
+<script src="<?= h(DriverContext::url('/frontend/assets/js/vehicle-catalog.js')) ?>" defer></script>
 <?php render_page_end(); ?>

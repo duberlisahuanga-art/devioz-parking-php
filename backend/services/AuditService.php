@@ -15,6 +15,10 @@ final class AuditService
         ?array $actor = null
     ): int {
         $user = $actor ?? current_user();
+        $managedDriver = ($user['role'] ?? null) === 'admin' ? DriverContext::metadata() : null;
+        if ($managedDriver !== null && empty($metadata['automatic'])) {
+            $metadata['managed_driver'] = $managedDriver;
+        }
         $metadata = [
             'module' => $module,
             'reference' => $reference,

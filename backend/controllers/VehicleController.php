@@ -6,13 +6,13 @@ final class VehicleController
 {
     public static function index(): array
     {
-        $user = require_auth();
+        $user = DriverContext::managed() ?? require_auth();
         return Vehicle::forUser((int) $user['id']);
     }
 
     public static function store(array $data): int
     {
-        $user = require_driver();
+        $user = DriverContext::user();
 
         $rawPlate = is_string($data['plate'] ?? null) ? trim($data['plate']) : '';
         if (!validate_peruvian_plate($rawPlate)) {
@@ -57,7 +57,7 @@ final class VehicleController
 
     public static function destroy(int $vehicleId): void
     {
-        $user = require_driver();
+        $user = DriverContext::user();
         $vehicle = Vehicle::findOwned($vehicleId, (int) $user['id']);
         if (!$vehicle) {
             AuditService::denied('vehicle_owner_required');

@@ -34,7 +34,7 @@ final class ReservationController
 
     public static function index(): array
     {
-        $user = require_auth();
+        $user = DriverContext::managed() ?? require_auth();
         ReservationLifecycleService::run();
         $history = ($_GET['view'] ?? '') === 'history';
         return ($user['role'] ?? '') === 'admin'
@@ -64,7 +64,7 @@ final class ReservationController
 
     public static function createData(): array
     {
-        $user = require_driver();
+        $user = DriverContext::user();
         ReservationLifecycleService::run();
         $parking = Parking::devioz();
         if (!$parking) {
@@ -81,7 +81,7 @@ final class ReservationController
 
     public static function store(array $data): int
     {
-        $user = require_driver();
+        $user = DriverContext::user();
         ReservationLifecycleService::run();
         $spaceId = (int) ($data['space_id'] ?? 0);
         $vehicleId = (int) ($data['vehicle_id'] ?? 0);
@@ -161,7 +161,7 @@ final class ReservationController
 
     public static function renew(int $reservationId): int
     {
-        $user = require_driver();
+        $user = DriverContext::user();
         ReservationLifecycleService::run();
         return transaction(function () use ($reservationId, $user): int {
             $previous = Reservation::find($reservationId, true);
@@ -308,7 +308,7 @@ final class ReservationController
 
     public static function requestCancellation(int $reservationId, string $reason): void
     {
-        $user = require_driver();
+        $user = DriverContext::user();
         $pdo = db();
         $pdo->beginTransaction();
         try {

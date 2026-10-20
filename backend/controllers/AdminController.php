@@ -131,7 +131,7 @@ final class AdminController
 
     public static function dashboardForCurrentUser(): array
     {
-        $user = require_auth();
+        $user = DriverContext::managed() ?? require_auth();
         $spaceStats = Space::stats();
         $total = (int) ($spaceStats['total'] ?? 0);
         $available = (int) ($spaceStats['available'] ?? 0);

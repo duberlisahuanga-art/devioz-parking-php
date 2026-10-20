@@ -12,7 +12,7 @@ final class PaymentController
 
     public static function submit(int $reservationId, array $data, array $files): int
     {
-        $user = require_driver();
+        $user = DriverContext::user();
         $code = $data['provider_tx_id'] ?? null;
         if (($data['method'] ?? '') !== 'yape' || !is_string($code) || preg_match('/^\d{3}$/D', $code) !== 1) {
             throw new ValidationException('Selecciona Yape e ingresa un código de seguridad de 3 dígitos.');

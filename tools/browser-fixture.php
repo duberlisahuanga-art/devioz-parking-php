@@ -63,8 +63,9 @@ $pdo->exec("ALTER TABLE cameras ADD COLUMN channel_number TINYINT UNSIGNED NULL,
 $q=$pdo->prepare('INSERT INTO users(id,name,email,password,role,status) VALUES(?,?,?,?,?,?)');
 foreach ([1=>'admin',2=>'driver',3=>'other'] as $id=>$role) $q->execute([$id,'Prueba '.$role,$role.'@browser.invalid',password_hash('Testing123!',PASSWORD_DEFAULT),$role==='admin'?'admin':'driver','active']);
 $q->execute([4,'Prueba segundo administrador','recorder@browser.invalid',password_hash('Testing123!',PASSWORD_DEFAULT),'admin','active']);
-$pdo->exec("INSERT INTO parkings(id,slug,name) VALUES(1,'devioz','Prueba'); INSERT INTO spaces(id,parking_id,code,status) VALUES(1,1,'P01','reserved'); INSERT INTO vehicles(id,user_id,plate) VALUES(1,2,'ABC-123'); INSERT INTO reservations(id,user_id,parking_id,space_id,vehicle_id,starts_on,ends_on,status,amount,payment_status) VALUES(1,2,1,1,1,CURDATE(),DATE_ADD(CURDATE(),INTERVAL 1 MONTH),'confirmed',100,'pending')");
+$pdo->exec("INSERT INTO parkings(id,slug,name) VALUES(1,'estacionamiento-devioz','Prueba'); INSERT INTO spaces(id,parking_id,code,status) VALUES(1,1,'P01','reserved'); INSERT INTO vehicles(id,user_id,plate) VALUES(1,2,'ABC-123'); INSERT INTO reservations(id,user_id,parking_id,space_id,vehicle_id,starts_on,ends_on,status,amount,payment_status) VALUES(1,2,1,1,1,CURDATE(),DATE_ADD(CURDATE(),INTERVAL 1 MONTH),'confirmed',100,'pending')");
 $pdo->exec("INSERT INTO spaces(id,parking_id,code,status) VALUES(2,1,'P02','reserved'),(3,1,'P03','reserved'); INSERT INTO reservations(id,user_id,parking_id,space_id,vehicle_id,starts_on,ends_on,status,amount,payment_status) VALUES(2,2,1,2,1,CURDATE(),DATE_ADD(CURDATE(),INTERVAL 1 MONTH),'confirmed',100,'unpaid'),(3,2,1,3,1,CURDATE(),DATE_ADD(CURDATE(),INTERVAL 1 MONTH),'confirmed',100,'unpaid')");
+$pdo->exec("INSERT INTO spaces(id,parking_id,code,status) VALUES(4,1,'GEST-04','available'),(5,1,'GEST-05','available')");
 // Metadata only: a separate parking keeps the real recording/upload cases empty.
 // These entries deliberately do not claim a playable physical video file.
 $pdo->exec("INSERT INTO parkings(id,slug,name) VALUES(2,'recording-library','Biblioteca de prueba')");

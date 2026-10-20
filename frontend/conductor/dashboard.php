@@ -2,7 +2,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../../backend/bootstrap.php';
 require_once __DIR__ . '/../includes/layout.php';
-$user = require_driver();
+$user = DriverContext::user();
 $data = AdminController::dashboardForCurrentUser();
 $today = (new DateTimeImmutable('now', new DateTimeZone('America/Lima')))->format('Y-m-d');
 $reservations = Reservation::forUser((int) $user['id']);
@@ -42,8 +42,8 @@ render_page_start('Mi dashboard', 'dashboard');
 ?>
 <div class="dashboard-v3">
     <div class="section-intro"><div><h2>Mi resumen</h2><p>Consulta tu reserva, pagos, vehículo y disponibilidad de plazas.</p></div><div class="intro-actions">
-        <a class="dashboard-button soft" href="<?= h(app_url('/frontend/conductor/pagos.php')) ?>"><i class="bi bi-phone"></i> Ver pagos</a>
-        <a class="dashboard-button primary" href="<?= h(app_url('/frontend/conductor/reservar.php')) ?>"><i class="bi bi-plus-circle"></i> Reservar plaza</a>
+        <a class="dashboard-button soft" href="<?= h(DriverContext::url('/frontend/conductor/pagos.php')) ?>"><i class="bi bi-phone"></i> Ver pagos</a>
+        <a class="dashboard-button primary" href="<?= h(DriverContext::url('/frontend/conductor/reservar.php')) ?>"><i class="bi bi-plus-circle"></i> Reservar plaza</a>
     </div></div>
     <div class="kpis">
         <?php foreach ([
@@ -68,7 +68,7 @@ render_page_start('Mi dashboard', 'dashboard');
                     <?php endforeach; ?>
                 </div>
                 <div class="period-progress"><div><span>Vigencia del período</span><strong><?= h($progress) ?>%</strong></div><div class="progress-shell" role="progressbar" aria-label="Porcentaje transcurrido de la reserva" aria-valuemin="0" aria-valuemax="100" aria-valuenow="<?= h($progress) ?>"><div class="period-progress-bar" style="width:<?= h($progress) ?>%"></div></div></div>
-                <?php else: ?><p class="empty-state"><?= h($expiryNote) ?>. Solicita una plaza o consulta tus reservas.</p><a class="dashboard-button soft" href="<?= h(app_url('/frontend/conductor/reservas.php')) ?>">Ver mis reservas</a><?php endif; ?>
+                <?php else: ?><p class="empty-state"><?= h($expiryNote) ?>. Solicita una plaza o consulta tus reservas.</p><a class="dashboard-button soft" href="<?= h(DriverContext::url('/frontend/conductor/reservas.php')) ?>">Ver mis reservas</a><?php endif; ?>
             </div>
             <div class="card" data-dashboard-map>
                 <div class="card-head"><div><h3>Disponibilidad de plazas</h3><p>Consulta el estado actual del estacionamiento</p></div></div><div class="card-body">
@@ -85,14 +85,14 @@ render_page_start('Mi dashboard', 'dashboard');
                     <p class="empty-state" data-dashboard-empty <?= $spaces ? 'hidden' : '' ?> role="status">No hay plazas con este estado.</p>
                 </div>
             </div>
-            <div class="card"><div class="card-head"><div><h3>Mi vehículo</h3><p>Vehículo asociado a tu reserva</p></div><a class="dashboard-button soft" href="<?= h(app_url('/frontend/conductor/vehiculos.php')) ?>">Gestionar</a></div>
+            <div class="card"><div class="card-head"><div><h3>Mi vehículo</h3><p>Vehículo asociado a tu reserva</p></div><a class="dashboard-button soft" href="<?= h(DriverContext::url('/frontend/conductor/vehiculos.php')) ?>">Gestionar</a></div>
                 <div class="card-body vehicle-box"><div class="vehicle-icon"><i class="bi bi-car-front-fill"></i></div><div><strong><?= h($current['vehicle_plate'] ?? 'Sin vehículo asociado') ?></strong><p><?= h($vehicleDescription) ?><?= $current ? ' · ' . h($current['vehicle_color'] ?: 'Color no registrado') : '' ?></p></div></div>
             </div>
         </div>
         <div class="driver-side">
             <div class="card"><div class="card-head"><div><h3>Acciones rápidas</h3><p>Accesos más utilizados</p></div></div><div class="card-body quick-grid">
                 <?php foreach (['reservar' => ['Reservar', 'bi-plus-circle'], 'pagos' => ['Pagar', 'bi-phone'], 'reservas' => ['Reservas', 'bi-calendar-check'], 'vehiculos' => ['Vehículos', 'bi-car-front']] as $route => [$label, $icon]): ?>
-                <a class="quick" href="<?= h(app_url('/frontend/conductor/' . $route . '.php')) ?>"><i class="bi <?= h($icon) ?>"></i><?= h($label) ?></a>
+                <a class="quick" href="<?= h(DriverContext::url('/frontend/conductor/' . $route . '.php')) ?>"><i class="bi <?= h($icon) ?>"></i><?= h($label) ?></a>
                 <?php endforeach; ?>
             </div></div>
             <div class="card"><div class="card-head"><div><h3>Estado de tu cuenta</h3><p>Resumen personal</p></div></div><div class="card-body">
@@ -100,7 +100,7 @@ render_page_start('Mi dashboard', 'dashboard');
                 <div class="alert-row"><span class="alert-dot <?= $current ? 'green' : 'amber' ?>"></span><div><b><?= $current ? 'Reserva vigente' : 'Sin reserva vigente' ?></b><small><?= $current ? 'Tu reserva vence el ' . h(format_date($current['ends_on'])) . '.' : 'Consulta disponibilidad para reservar.' ?></small></div></div>
                 <div class="alert-row"><span class="alert-dot blue"></span><div><b><?= $vehicles ? 'Vehículo registrado' : 'Sin vehículos registrados' ?></b><small><?= $current ? h($current['vehicle_plate']) . ' asociado a tu reserva.' : ($vehicles ? 'Puedes seleccionar un vehículo al reservar.' : 'Registra un vehículo para reservar.') ?></small></div></div>
             </div></div>
-            <div class="card"><div class="card-head"><div><h3>Últimos pagos</h3><p>Comprobantes recientes</p></div><a class="dashboard-button soft" href="<?= h(app_url('/frontend/conductor/pagos.php')) ?>">Ver todos</a></div><div class="card-body">
+            <div class="card"><div class="card-head"><div><h3>Últimos pagos</h3><p>Comprobantes recientes</p></div><a class="dashboard-button soft" href="<?= h(DriverContext::url('/frontend/conductor/pagos.php')) ?>">Ver todos</a></div><div class="card-body">
                 <?php if (!$recentPayments): ?><p class="empty-state">Todavía no tienes pagos registrados.</p><?php endif; ?>
                 <?php foreach ($recentPayments as $payment): ?><div class="activity-row"><time class="activity-time" datetime="<?= h($payment['created_at']) ?>" title="<?= h(format_datetime($payment['created_at'])) ?>"><?= h((new DateTimeImmutable($payment['created_at']))->format('d/m')) ?></time><div><b><?= h(money((float) $payment['amount'])) ?> · <?= h(ucfirst($payment['method'])) ?></b><small class="<?= $payment['status'] === 'paid' ? 'good' : ($payment['status'] === 'rejected' ? 'bad' : 'warn') ?>"><?= h(status_label($payment['status'])) ?></small></div></div><?php endforeach; ?>
             </div></div>

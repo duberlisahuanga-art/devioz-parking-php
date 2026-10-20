@@ -11,7 +11,7 @@ require_once __DIR__ . '/../includes/layout.php';
 |--------------------------------------------------------------------------
 */
 
-$user = require_driver();
+$user = DriverContext::user();
 
 $userId = (int) $user['id'];
 

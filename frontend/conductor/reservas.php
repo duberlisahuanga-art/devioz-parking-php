@@ -5,7 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../backend/bootstrap.php';
 require_once __DIR__ . '/../includes/layout.php';
 
-require_driver();
+DriverContext::user();
 
 /*
 |--------------------------------------------------------------------------
@@ -90,8 +90,8 @@ render_page_start(
 );
 ?>
 <nav class="d-flex flex-wrap gap-2 mb-3" aria-label="Estado de las reservas">
-    <a class="btn btn-outline-primary" href="?view=current" <?= ($_GET['view'] ?? '') !== 'history' ? 'aria-current="page"' : '' ?>>En curso</a>
-    <a class="btn btn-outline-primary" href="?view=history" <?= ($_GET['view'] ?? '') === 'history' ? 'aria-current="page"' : '' ?>>Historial y renovación</a>
+    <a class="btn btn-outline-primary" href="<?= h(DriverContext::url('/frontend/conductor/reservas.php?view=current')) ?>" <?= ($_GET['view'] ?? '') !== 'history' ? 'aria-current="page"' : '' ?>>En curso</a>
+    <a class="btn btn-outline-primary" href="<?= h(DriverContext::url('/frontend/conductor/reservas.php?view=history')) ?>" <?= ($_GET['view'] ?? '') === 'history' ? 'aria-current="page"' : '' ?>>Historial y renovación</a>
 </nav>
 <p class="small text-secondary">Las mensualidades finalizadas se conservan en el historial. Desde allí puedes renovar la misma plaza si está disponible; cada renovación requiere un nuevo pago aprobado.</p>
 
@@ -116,7 +116,7 @@ render_page_start(
     <a
         class="btn btn-primary"
         href="<?= h(
-            app_url(
+            DriverContext::url(
                 '/frontend/conductor/reservar.php'
             )
         ) ?>"
@@ -153,7 +153,7 @@ render_page_start(
         <a
             class="btn btn-primary mt-2"
             href="<?= h(
-                app_url(
+                DriverContext::url(
                     '/frontend/conductor/reservar.php'
                 )
             ) ?>"
@@ -817,7 +817,7 @@ render_page_start(
                         <div class="payment-qr-wrap">
 
                             <img
-                                src="<?= h(app_url('/frontend/assets/img/payments/yape_qr_oficial.png')) ?>"
+                                src="<?= h(DriverContext::url('/frontend/assets/img/payments/yape_qr_oficial.png')) ?>"
                                 alt="QR oficial de Yape para pagos"
                                 class="payment-qr-image"
                             >

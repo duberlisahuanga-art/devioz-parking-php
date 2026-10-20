@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../../backend/bootstrap.php';
 require_once __DIR__ . '/../includes/layout.php';
-require_driver();
+DriverContext::user();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     run_post_action(function (): void { ReservationController::store($_POST); }, 'Reserva creada correctamente.', '/frontend/conductor/reservas.php');
@@ -34,7 +34,7 @@ render_page_start('Reservar plaza', 'reservar');
             </div>
 
             <?php if (!$data['vehicles']): ?>
-                <div class="alert alert-warning mt-3">Primero registra un vehículo en <a href="<?= h(app_url('/frontend/conductor/vehiculos.php')) ?>">Mis vehículos</a>.</div>
+                <div class="alert alert-warning mt-3">Primero registra un vehículo en <a href="<?= h(DriverContext::url('/frontend/conductor/vehiculos.php')) ?>">Mis vehículos</a>.</div>
             <?php elseif (!$available): ?>
                 <div class="alert alert-warning mt-3">En este momento no hay plazas disponibles.</div>
             <?php else: ?>

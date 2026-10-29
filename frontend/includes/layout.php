@@ -416,9 +416,8 @@ function render_page_start(
         content="Sistema de gestión de estacionamiento Devioz Parking"
     >
 
-    <title>
-        <?= h($title) ?> | Devioz Parking
-    </title>
+    <title>Devioz Parking</title>
+    <link rel="icon" type="image/png" href="<?= h(app_url('/frontend/assets/favicon.png?v=' . filemtime(__DIR__ . '/../assets/favicon.png'))) ?>">
 
     <!-- Bootstrap -->
     <link

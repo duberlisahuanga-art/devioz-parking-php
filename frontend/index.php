@@ -43,9 +43,8 @@ $authMode = (
         content="width=device-width, initial-scale=1"
     >
 
-    <title>
-        DEVIOZ PARKING | Tu lugar, en el momento exacto
-    </title>
+    <title>Devioz Parking</title>
+    <link rel="icon" type="image/png" href="<?= htmlspecialchars(app_url('/frontend/assets/favicon.png?v=' . filemtime(__DIR__ . '/assets/favicon.png')), ENT_QUOTES, 'UTF-8') ?>">
 
     <!-- Bootstrap -->
     <link

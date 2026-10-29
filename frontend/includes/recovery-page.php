@@ -54,7 +54,8 @@ $title = $resetMode ? 'Establecer contraseña nueva' : 'Recuperar contraseña';
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="referrer" content="no-referrer">
-    <title><?= h($title) ?> | DEVIOZ Parking</title>
+    <title>Devioz Parking</title>
+    <link rel="icon" type="image/png" href="<?= h(app_url('/frontend/assets/favicon.png?v=' . filemtime(__DIR__ . '/../assets/favicon.png'))) ?>">
     <script src="<?= h(app_url('/frontend/assets/js/theme.js')) ?>"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="<?= h(app_url('/frontend/assets/css/styles.css')) ?>" rel="stylesheet">

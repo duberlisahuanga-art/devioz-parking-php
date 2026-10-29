@@ -11,7 +11,8 @@ $flash = consume_flash();
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Iniciar sesión | Devioz Parking</title>
+    <title>Devioz Parking</title>
+    <link rel="icon" type="image/png" href="<?= htmlspecialchars(app_url('/frontend/assets/favicon.png?v=' . filemtime(__DIR__ . '/assets/favicon.png')), ENT_QUOTES, 'UTF-8') ?>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link href="<?= htmlspecialchars(app_url('/frontend/assets/css/styles.css'), ENT_QUOTES, 'UTF-8') ?>" rel="stylesheet">

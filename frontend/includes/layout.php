@@ -465,20 +465,12 @@ function render_page_start(
         <!-- Marca -->
         <div class="brand-wrap">
 
-            <div class="brand-mark">
-                <i class="bi bi-p-square-fill"></i>
-            </div>
-
-            <div class="brand-text">
-
-                <div class="brand-name">
-                    Devioz Parking
-                </div>
-
-                <div class="brand-subtitle">
-                    Gestión inteligente
-                </div>
-
+            <div class="brand-logo">
+                <img
+                    src="<?= h(app_url('/frontend/assets/img/image.png')) ?>"
+                    alt="Devioz Parking"
+                    width="1600"
+                    height="864">
             </div>
 
             <button

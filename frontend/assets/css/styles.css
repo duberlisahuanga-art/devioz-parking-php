@@ -170,59 +170,26 @@ textarea {
   padding:
     0.45rem
     0.25rem
-    1.25rem;
+    1rem;
+
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid var(--primary);
 }
 
-.brand-mark {
-  width: 46px;
-  height: 46px;
-
-  flex: 0 0 46px;
-
-  display: grid;
-  place-items: center;
-
-  border-radius: 15px;
-
-  color: white;
-
-  font-size: 1.55rem;
-
-  background:
-    linear-gradient(
-      135deg,
-      rgba(255, 255, 255, 0.22),
-      rgba(255, 255, 255, 0.08)
-    );
-
-  border: 1px solid rgba(255, 255, 255, 0.15);
-
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+.brand-logo {
+  display: flex;
+  align-items: center;
+  flex: 0 0 112px;
+  width: 112px;
+  height: 61px;
+  overflow: hidden;
 }
 
-.brand-text {
-  min-width: 0;
-}
-
-.brand-name {
-  color: #ffffff;
-
-  font-size: 1rem;
-  font-weight: 800;
-
-  letter-spacing: -0.02em;
-
-  white-space: nowrap;
-}
-
-.brand-subtitle {
-  color: #60a5fa;
-
-  font-size: 0.72rem;
-  font-weight: 500;
-
-  margin-top: 0.05rem;
+.brand-logo img {
+  display: block;
+  width: 112px;
+  height: auto;
+  max-width: none;
 }
 
 .sidebar-close {
@@ -568,7 +535,7 @@ textarea {
 
 @media (min-width: 992px) {
   .sidebar .brand-wrap {
-    padding-top: 1.85rem;
+    padding-top: 1rem;
   }
 
   body.sidebar-collapsed .sidebar {
@@ -589,7 +556,15 @@ textarea {
     gap: 0;
   }
 
-  body.sidebar-collapsed .sidebar .brand-text,
+  body.sidebar-collapsed .sidebar .brand-logo {
+    flex-basis: 46px;
+    width: 46px;
+  }
+
+  body.sidebar-collapsed .sidebar .brand-logo img {
+    width: 94px;
+  }
+
   body.sidebar-collapsed .sidebar .sidebar-user-info,
   body.sidebar-collapsed .sidebar .sidebar-section-label,
   body.sidebar-collapsed .sidebar .nav-item-content,

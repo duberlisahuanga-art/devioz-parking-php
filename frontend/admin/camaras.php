@@ -5,12 +5,14 @@ declare(strict_types=1);
 require_once __DIR__ . '/../../backend/bootstrap.php';
 require_once __DIR__ . '/../includes/layout.php';
 require_admin();
+header('Cache-Control: private, no-store');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = (string) ($_POST['action'] ?? '');
     $cameraId = (int) ($_POST['camera_id'] ?? 0);
     run_post_action(function () use ($action, $cameraId): void {
-        if ($action === 'create') CameraController::store($_POST);
+        if ($action === 'connect_dvr') CameraBridgeService::enableDvr((int) ($_POST['parking_id'] ?? 0));
+        elseif ($action === 'create') CameraController::store($_POST);
         elseif ($action === 'update') CameraController::update($cameraId, $_POST);
         elseif ($action === 'delete') {
             if (($_POST['confirm_delete'] ?? '') !== '1') throw new RuntimeException('Confirma la eliminación.');
@@ -23,7 +25,7 @@ $cameras = CameraController::index();
 $parkings = Parking::allWithStats();
 render_page_start('Cámaras', 'camaras');
 ?>
-<div class="camera-hmi" data-camera-module data-recordings-endpoint="<?= h(app_url('/frontend/admin/grabaciones.php')) ?>" data-recordings-csrf="<?= h(csrf_token()) ?>">
+<div class="camera-hmi" data-camera-module data-stream-endpoint="<?= h(app_url('/frontend/admin/camera-stream.php')) ?>" data-bridge-configured="<?= CameraBridgeService::configured() ? '1' : '0' ?>" data-recordings-endpoint="<?= h(app_url('/frontend/admin/grabaciones.php')) ?>" data-recordings-csrf="<?= h(csrf_token()) ?>">
     <script type="application/json" data-camera-data><?= json_encode($cameras, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) ?></script>
     <header class="camera-hmi-heading">
         <div><span class="camera-hmi-eyebrow">VIDEOVIGILANCIA · DVR / 4 CANALES</span><h2>Centro de monitoreo</h2><p>Canales del DVR y prueba con la cámara de este equipo.</p></div>
@@ -31,6 +33,21 @@ render_page_start('Cámaras', 'camaras');
             <select data-camera-parking><?php foreach ($parkings as $parking): ?><option value="<?= h($parking['id']) ?>"><?= h($parking['name']) ?></option><?php endforeach; ?></select>
         </label>
     </header>
+    <section class="camera-bridge-panel" aria-label="Conexión al DVR">
+        <div><strong>DVR Hikvision · vídeo en vivo</strong><p data-bridge-status role="status" aria-live="polite">Comprobando servicio de cámaras…</p></div>
+        <div class="camera-hmi-toolbar">
+            <button type="button" data-camera-action="bridge-status">Comprobar servicio</button>
+            <button type="button" data-camera-action="reconnect">Reconectar vídeo</button>
+        </div>
+        <details>
+            <summary>Preparar los cuatro canales del DVR</summary>
+            <p>Configura los cuatro canales del estacionamiento seleccionado con WebRTC y calidad ligera. Conserva sus nombres y estados; sustituye la conexión web anterior.</p>
+            <form method="post" data-bridge-enable>
+                <?= csrf_field() ?><input type="hidden" name="action" value="connect_dvr"><input type="hidden" name="parking_id" data-bridge-parking>
+                <button type="submit" data-bridge-enable-button <?= CameraBridgeService::configured() ? '' : 'disabled' ?>>Conectar canales al DVR</button>
+            </form>
+        </details>
+    </section>
     <div class="camera-hmi-toolbar">
         <button type="button" data-camera-action="grid"><i class="bi bi-grid"></i> Vista 2x2</button>
         <button type="button" data-camera-action="single"><i class="bi bi-square"></i> Vista individual</button>
@@ -59,6 +76,7 @@ render_page_start('Cámaras', 'camaras');
                     <button type="button" data-camera-action="video-fullscreen">Ampliar imagen</button>
                 </div>
                 <p><strong>Calidad configurada:</strong> <span data-camera-quality-info>Sin cámara seleccionada</span></p>
+                <label>Calidad del vídeo en vivo<select data-camera-live-quality><option value="sub">Ligera (recomendada en móvil)</option><option value="main">Principal (más detalle)</option></select></label>
                 <p>La calidad depende de la señal web configurada. Pausar la imagen no detiene la grabación del DVR.</p>
                 <dl data-camera-single-diagnostic></dl>
             </aside>
@@ -226,12 +244,12 @@ render_page_start('Cámaras', 'camaras');
                         <h3>Red y streaming</h3>
                         <p>Configura una señal web real del canal. Las direcciones de red y los puertos dependen de la instalación del DVR.</p>
                         <div class="camera-settings-fields">
-                            <label>Ruta interna del canal<input name="rtsp_path" maxlength="255" placeholder="/Streaming/Channels/102"><small>Solo ruta X01 / X02, sin credenciales.</small></label>
-                            <label>Endpoint web<input name="stream_url" maxlength="500" type="url" placeholder="https://servidor/canal1/index.m3u8"><small>HTTP/HTTPS publicado por el transcodificador.</small></label>
-                            <label>Protocolo<select name="stream_protocol"><option value="hls">HLS</option><option value="webrtc" disabled>WebRTC (pendiente de integración)</option></select></label>
+                            <label>Ruta interna del canal<input name="rtsp_path" maxlength="255" placeholder="/Streaming/Channels/102"><small>En WebRTC se calcula por canal y calidad; la conexión está en la configuración privada.</small></label>
+                            <label>Endpoint HLS<input name="stream_url" maxlength="500" type="url" placeholder="https://servidor/canal1/index.m3u8"><small>Solo se utiliza con HLS. WebRTC utiliza la conexión privada al DVR.</small></label>
+                            <label>Protocolo<select name="stream_protocol"><option value="hls">HLS</option><option value="webrtc">WebRTC · DVR configurado</option></select></label>
                             <label>Calidad preferida<select name="preferred_quality"><option value="sub">Sub-stream (X02)</option><option value="main">Main-stream (X01)</option></select></label>
                         </div>
-                        <p>El endpoint debe corresponder a la calidad seleccionada y no contener usuario ni contraseña. El navegador no reproduce una dirección RTSP directamente. WebRTC está pendiente de integración.</p>
+                        <p>WebRTC utiliza la conexión privada al DVR. No escribas usuarios ni contraseñas en estos campos. Para HLS, indica un endpoint web compatible con la calidad seleccionada.</p>
                     </section>
                     <section data-camera-panel="image" hidden>
                         <h3>Imagen y OSD</h3><p>Ajustes locales del visor; no modifican el DVR.</p>
@@ -258,6 +276,7 @@ render_page_start('Cámaras', 'camaras');
     <noscript>Activa JavaScript para utilizar el centro de monitoreo.</noscript>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.13/dist/hls.min.js" crossorigin="anonymous"></script>
+<script src="<?= h(app_url('/frontend/assets/js/camera-webrtc.js')) ?>?v=<?= h((string) filemtime(__DIR__ . '/../assets/js/camera-webrtc.js')) ?>" defer></script>
 <script src="<?= h(app_url('/frontend/assets/js/webcam-recording.js')) ?>?v=<?= h((string) filemtime(__DIR__ . '/../assets/js/webcam-recording.js')) ?>" defer></script>
 <script src="<?= h(app_url('/frontend/assets/js/cameras.js')) ?>?v=<?= h((string) filemtime(__DIR__ . '/../assets/js/cameras.js')) ?>" defer></script>
 <?php render_page_end(); ?>

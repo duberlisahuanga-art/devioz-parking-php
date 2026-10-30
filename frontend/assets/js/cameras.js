@@ -7,6 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const form = find('[data-camera-form]');
         const deletion = find('[data-camera-delete]');
         const players = new Map();
+        const liveQualities = new Map();
         let selected = null;
         let currentView = 'grid';
         let returnView = 'grid';
@@ -17,6 +18,26 @@ document.addEventListener('DOMContentLoaded', () => {
         let webcamRequest = 0;
         let webcamPending = false;
         let recording = null;
+        const bridgeRequests = new Set();
+        const checkBridge = async () => {
+            const output = find('[data-bridge-status]');
+            const controller = new AbortController();
+            bridgeRequests.add(controller);
+            const timeout = setTimeout(() => controller.abort(), 4000);
+            try {
+                const response = await fetch(root.dataset.streamEndpoint + '?action=status', {
+                    credentials: 'same-origin', cache: 'no-store', signal: controller.signal
+                });
+                const status = await response.json();
+                output.textContent = status.message || status.error || 'No se pudo comprobar el servicio de cámaras.';
+                output.dataset.state = response.ok && status.running ? 'online' : 'error';
+                if (response.ok) {
+                    root.dataset.bridgeConfigured = status.configured ? '1' : '0';
+                    find('[data-bridge-enable-button]').disabled = !status.configured;
+                }
+            } catch { output.textContent = 'No se pudo comprobar el servicio. Revisa la conexión del servidor.'; }
+            finally { clearTimeout(timeout); bridgeRequests.delete(controller); }
+        };
         const message = (text) => { find('[data-camera-message]').textContent = text; };
         const element = (tag, className, text) => {
             const node = document.createElement(tag);
@@ -125,6 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 player.disposed = true;
                 clearTimeout(player.timer);
                 player.hls?.destroy();
+                player.rtc?.dispose();
                 player.video.pause();
                 player.video.removeAttribute('src');
                 player.video.load();
@@ -136,6 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const player = selected && players.get(Number(selected.id));
             find('[data-camera-action="single"]').disabled = !firstCamera();
             find('[data-camera-action="create"]').disabled = [1, 2, 3, 4].every((channel) => cameraAt(channel));
+            find('[data-camera-action="reconnect"]').disabled = ![...players.values()].some(item => item.rtc && !item.disposed);
             const ready = Boolean(player?.canPlay && frameAvailable(player.video) && !player.failed);
             const mutedPlayers = [...players.values()].filter((item) => item.hasAudio && !item.disposed);
             const audio = find('[data-camera-action="audio"]');
@@ -156,7 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
             mute.textContent = player?.video.muted === false ? 'Silenciar audio' : 'Activar audio';
             mute.setAttribute('aria-pressed', String(player?.video.muted === false));
             const test = find('[data-camera-action="test"]');
-            test.disabled = !selected || selected.status !== 'active' || selected.stream_protocol !== 'hls' || !safeEndpoint(selected.stream_url);
+            test.disabled = !selected || selected.status !== 'active'
+                || (selected.stream_protocol !== 'webrtc' && !safeEndpoint(selected.stream_url));
         };
         const diagnostic = (container, camera) => {
             container.replaceChildren();
@@ -165,11 +189,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const rows = {
                 'Estado de cámara': camera ? (camera.status === 'active' ? 'Activa' : 'Inactiva') : 'No configurada',
                 'Protocolo': camera?.stream_protocol?.toUpperCase() || 'No disponible',
-                'Calidad del endpoint': camera ? (camera.preferred_quality === 'main' ? 'Main-stream' : 'Sub-stream') : 'No disponible',
+                'Calidad solicitada': camera ? ((player?.rtc?.quality || camera.preferred_quality) === 'main' ? 'Principal' : 'Ligera') : 'No disponible',
                 'Resolución recibida': resolution,
-                'Bitrate': 'Sin telemetría',
-                'Latencia': 'Sin telemetría',
-                'Reproductor': player?.state || (camera?.stream_url ? 'Sin iniciar' : 'Pendiente de transcodificador')
+                'Bitrate recibido': player?.rtc?.metrics.kbps === undefined ? 'Sin telemetría' : player.rtc.metrics.kbps + ' kb/s',
+                'RTT de red': player?.rtc?.metrics.rtt == null ? 'Sin telemetría' : player.rtc.metrics.rtt + ' ms',
+                'Fotogramas / segundo': player?.rtc?.metrics.fps ?? 'Sin telemetría',
+                'Reproductor': player?.state || (camera?.stream_protocol === 'webrtc' || camera?.stream_url ? 'Sin iniciar' : 'Fuente no configurada')
             };
             Object.entries(rows).forEach(([label, value]) => container.append(element('dt', '', label), element('dd', '', value)));
         };
@@ -178,7 +203,7 @@ document.addEventListener('DOMContentLoaded', () => {
             diagnostic(find('[data-camera-settings-diagnostic]'), selected);
             refreshControls();
         };
-        const startPlayer = (camera, video, overlay, badge) => {
+        const startPlayer = (camera, video, overlay, badge, single) => {
             const player = { video, hls: null, timer: null, state: 'Sin iniciar', disposed: false,
                 canPlay: false, loaded: false, failed: false, hasAudio: false };
             players.set(Number(camera.id), player);
@@ -191,7 +216,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 overlay.hidden = kind === 'online';
                 refreshDiagnostics();
             };
-            const noSignal = () => { clearTimeout(player.timer); player.failed = true; setState('Canal sin señal', 'error'); };
+            const noSignal = () => {
+                if (player.rtc) { player.rtc.fail('No se recibió vídeo compatible del canal.'); return; }
+                clearTimeout(player.timer); player.failed = true; setState('Canal sin señal', 'error');
+            };
             video.addEventListener('playing', () => {
                 if (!player.canPlay || player.disposed) return;
                 clearTimeout(player.timer); player.failed = false; player.loaded = true; setState('En línea', 'online');
@@ -207,6 +235,7 @@ document.addEventListener('DOMContentLoaded', () => {
             video.addEventListener('loadeddata', refreshDiagnostics);
             video.addEventListener('volumechange', refreshControls);
             video.addEventListener('waiting', () => {
+                if (player.rtc) return;
                 if (!player.canPlay || player.disposed) return;
                 setState('Esperando señal');
                 clearTimeout(player.timer);
@@ -220,8 +249,23 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             player.play = play;
             if (camera.status !== 'active') { setState('Inactiva'); return; }
+            if (camera.stream_protocol === 'webrtc') {
+                if (!window.DeviozCameraWebRTC) { setState('No se pudo cargar el reproductor WebRTC. Recarga la página.', 'error'); return; }
+                player.canPlay = true;
+                player.rtc = new window.DeviozCameraWebRTC({
+                    video, endpoint: root.dataset.streamEndpoint, csrf: root.dataset.recordingsCsrf,
+                    cameraId: Number(camera.id), quality: single ? (liveQualities.get(Number(camera.id)) || camera.preferred_quality || 'sub') : 'sub',
+                    onState: (state, kind = '') => {
+                        if (player.disposed) return;
+                        player.failed = kind === 'error';
+                        setState(state, kind);
+                    },
+                    onStats: () => { if (!player.disposed) refreshDiagnostics(); }
+                });
+                refreshControls();
+                return;
+            }
             if (!safeEndpoint(camera.stream_url)) { setState('Stream no configurado'); return; }
-            if (camera.stream_protocol === 'webrtc') { setState('WebRTC: requiere endpoint compatible y signaling'); return; }
             if (location.protocol === 'https:' && new URL(camera.stream_url).protocol === 'http:') {
                 setState('Endpoint HTTP bloqueado en página HTTPS', 'error'); return;
             }
@@ -267,7 +311,7 @@ document.addEventListener('DOMContentLoaded', () => {
             top.append(element('span', 'camera-channel-tag', 'CANAL ' + channel), badge);
             const bottom = element('div', 'camera-channel-bottom');
             const title = element('div');
-            title.append(element('strong', '', camera?.name || 'Canal ' + channel), element('small', '', camera?.location || camera?.coverage || 'No configurado'));
+            title.append(element('strong', '', camera?.name || 'Canal ' + channel), element('small', '', camera?.location || camera?.coverage || (camera ? 'Ubicación sin especificar' : 'No configurado')));
             const controls = element('div', 'camera-channel-controls');
             if (camera) {
                 const video = element('video');
@@ -294,7 +338,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
                 // Start after DOM insertion; events and data stay local to this root.
-                queueMicrotask(() => { if (article.isConnected) startPlayer(camera, video, overlay, badge); });
+                queueMicrotask(() => { if (article.isConnected) startPlayer(camera, video, overlay, badge, single); });
             } else {
                 controls.append(button('Configurar canal', () => openSettings(null, channel)));
             }
@@ -330,7 +374,9 @@ document.addEventListener('DOMContentLoaded', () => {
             find('[data-camera-single]').replaceChildren(card(Number(camera.channel_number), camera, true));
             find('[data-camera-single-name]').textContent = camera.name;
             find('[data-camera-single-coverage]').textContent = [camera.location, camera.coverage].filter(Boolean).join(' · ');
-            find('[data-camera-quality-info]').textContent = camera.preferred_quality === 'main' ? 'Principal' : 'Ligera';
+            find('[data-camera-quality-info]').textContent = (liveQualities.get(Number(camera.id)) || camera.preferred_quality) === 'main' ? 'Principal' : 'Ligera';
+            find('[data-camera-live-quality]').value = liveQualities.get(Number(camera.id)) || camera.preferred_quality || 'sub';
+            find('[data-camera-live-quality]').disabled = camera.stream_protocol !== 'webrtc';
             show('single');
             refreshDiagnostics();
             message('');
@@ -362,13 +408,14 @@ document.addEventListener('DOMContentLoaded', () => {
             form.elements.camera_id.value = camera?.id || '';
             deletion.hidden = !camera;
             deletion.elements.camera_id.value = camera?.id || '';
+            updateStreamFields();
             find('[data-camera-settings-title]').textContent = camera ? 'Configuración · ' + camera.name : 'Configurar canal ' + channel;
             ['brightness', 'contrast', 'saturation'].forEach((key) => { find('[data-camera-output="' + key + '"]').textContent = data[key] + '%'; });
             tab('device');
             show('settings');
             refreshDiagnostics();
             message(data.stream_protocol === 'webrtc'
-                ? 'Esta cámara conserva una configuración WebRTC pendiente de integración. Para reproducirla, selecciona HLS y configura su conexión web.' : '');
+                ? 'WebRTC utiliza el DVR configurado por el operador. Los ajustes de imagen son locales al visor.' : '');
         };
         const manage = () => {
             destroyPlayers();
@@ -424,6 +471,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (target.disabled) return;
             if (target.dataset.cameraTab) { tab(target.dataset.cameraTab); return; }
             const action = target.dataset.cameraAction;
+            if (action === 'reconnect') { players.forEach(player => player.rtc?.retry()); return; }
+            if (action === 'bridge-status') { checkBridge(); return; }
             if (currentView === 'webcam' && ['grid', 'single', 'manage', 'create', 'settings', 'back'].includes(action)
                 && recording?.preventLeaving()) return;
             if (action === 'grid') renderGrid();
@@ -487,7 +536,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 target.textContent = 'Zoom: ' + zoom + '×';
             }
             else if (action === 'test') {
-                if (!selected || selected.status !== 'active' || selected.stream_protocol !== 'hls' || !safeEndpoint(selected.stream_url)) return;
+                if (!selected || selected.status !== 'active'
+                    || (selected.stream_protocol !== 'webrtc' && !safeEndpoint(selected.stream_url))) return;
                 destroyPlayers();
                 const preview = card(Number(selected.channel_number), selected, true);
                 // A visible preview in diagnostics also works when opened from Gestión.
@@ -517,11 +567,13 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         form.elements.channel_number.addEventListener('change', updatePath);
         form.elements.preferred_quality.addEventListener('change', updatePath);
-        form.addEventListener('formdata', (event) => {
-            // Preserve an existing WebRTC setting; disabled options are otherwise omitted.
-            // New WebRTC choices remain unavailable until that protocol is implemented.
-            if (form.elements.stream_protocol.value === 'webrtc') event.formData.set('stream_protocol', 'webrtc');
-        });
+        const updateStreamFields = () => {
+            const rtc = form.elements.stream_protocol.value === 'webrtc';
+            form.elements.stream_url.readOnly = rtc;
+            form.elements.rtsp_path.readOnly = rtc;
+            if (rtc) updatePath();
+        };
+        form.elements.stream_protocol.addEventListener('change', updateStreamFields);
         form.addEventListener('invalid', (event) => {
             const panel = event.target.closest('[data-camera-panel]');
             if (panel) tab(panel.dataset.cameraPanel);
@@ -568,11 +620,26 @@ document.addEventListener('DOMContentLoaded', () => {
         document.addEventListener('visibilitychange', () => {
             if (document.hidden) recording.handleSourceEnd('La pestaña dejó de estar visible.');
         });
-        window.addEventListener('pagehide', () => { clearInterval(clockTimer); recording.dispose(); stopWebcam(); destroyPlayers(); });
+        window.addEventListener('pagehide', () => {
+            bridgeRequests.forEach(request => request.abort());
+            clearInterval(clockTimer); recording.dispose(); stopWebcam(); destroyPlayers();
+        });
         window.addEventListener('pageshow', (event) => {
             if (event.persisted) window.location.reload();
         });
         updateWebcamControls();
-        renderGrid();
+        find('[data-bridge-enable]').addEventListener('submit', event => {
+            if (recording?.preventLeaving()) { event.preventDefault(); return; }
+            find('[data-bridge-parking]').value = parking.value;
+        });
+        find('[data-camera-live-quality]').addEventListener('change', event => {
+            if (!selected || selected.stream_protocol !== 'webrtc') return;
+            liveQualities.set(Number(selected.id), event.target.value);
+            openSingle(selected);
+        });
+        checkBridge();
+        const initialMobileCamera = list().find(camera => camera.status === 'active' && camera.stream_protocol === 'webrtc');
+        if (window.matchMedia('(max-width: 767px)').matches && initialMobileCamera) openSingle(initialMobileCamera);
+        else renderGrid();
     });
 });

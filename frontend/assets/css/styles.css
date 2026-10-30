@@ -33,6 +33,13 @@
   --shadow-lg: 0 18px 50px rgba(15, 23, 42, 0.10);
 }
 
+.camera-hmi .camera-bridge-panel{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding:16px;margin-bottom:18px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--surface);color:var(--text)}
+.camera-hmi .camera-bridge-panel p{margin:6px 0;overflow-wrap:anywhere}
+.camera-hmi .camera-bridge-panel details{width:100%}
+.camera-hmi .camera-bridge-panel summary{cursor:pointer;min-height:32px}
+.camera-hmi [data-camera-live-quality]{width:100%;margin-top:6px;margin-bottom:12px;min-height:44px}
+@media(max-width:575px){.camera-hmi .camera-bridge-panel .camera-hmi-toolbar{width:100%}.camera-hmi .camera-bridge-panel button{min-height:44px}}
+
 .driver-management-banner {
   display: flex;
   flex-wrap: wrap;

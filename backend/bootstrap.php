@@ -47,7 +47,7 @@ function json_response(array $data, int $status = 200): never
 
 function request_ip(): ?string
 {
-    return $_SERVER['REMOTE_ADDR'] ?? null;
+    return RequestSecurity::clientIp($_SERVER, AppConfig::get('TRUSTED_PROXY_IPS'));
 }
 
 function request_user_agent(): ?string
@@ -116,6 +116,8 @@ require_once __DIR__ . '/services/RecoveryMailer.php';
 require_once __DIR__ . '/services/PasswordRecoveryService.php';
 require_once __DIR__ . '/services/VoucherService.php';
 require_once __DIR__ . '/services/CameraRecordingService.php';
+require_once __DIR__ . '/services/CameraBridgeService.php';
+require_once __DIR__ . '/services/CameraIceService.php';
 
 require_once __DIR__ . '/controllers/AuthController.php';
 require_once __DIR__ . '/controllers/VehicleController.php';

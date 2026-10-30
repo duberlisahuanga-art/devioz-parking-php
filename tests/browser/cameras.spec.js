@@ -15,6 +15,14 @@ async function login(page, user = 'admin') {
   await expect(page).toHaveURL(/dashboard\.php/);
 }
 
+async function saveCamera(page, form) {
+  // Wait for the new document before choosing a view; the mobile default differs.
+  await Promise.all([
+    page.waitForEvent('domcontentloaded'),
+    form.getByRole('button', { name: 'Guardar cámara', exact: true }).click()
+  ]);
+}
+
 async function prepareSyntheticCamera(page) {
   // Exercise real MediaStream/video/canvas behavior without requesting a physical device.
   await page.addInitScript(() => {
@@ -204,12 +212,11 @@ test('cámaras: canales inactivos y sin fuente no ofrecen reproducción ni captu
   await form.getByRole('combobox', { name: 'Estado', exact: true }).selectOption('inactive');
   await page.locator('[data-camera-tab="stream"]').click();
   const protocol = form.locator('[name="stream_protocol"]');
-  await expect(protocol.locator('option[value="webrtc"]')).toHaveJSProperty('disabled', true);
-  await protocol.focus();
-  await page.keyboard.press('End');
-  await page.keyboard.press('Tab');
+  await expect(protocol.locator('option[value="webrtc"]')).toHaveJSProperty('disabled', false);
+  await protocol.selectOption('hls');
   await expect(protocol).toHaveValue('hls');
-  await form.getByRole('button', { name: 'Guardar cámara', exact: true }).click();
+  await saveCamera(page, form);
+  await action(page, 'grid').first().click();
   const card = page.locator('[data-camera-grid] .camera-channel').filter({ hasText: name });
   await expect(card).toContainText('Inactiva');
   await card.getByRole('button', { name: 'Ampliar', exact: true }).click();
@@ -220,23 +227,26 @@ test('cámaras: canales inactivos y sin fuente no ofrecen reproducción ni captu
 
   await action(page, 'settings').click();
   await form.getByRole('combobox', { name: 'Estado', exact: true }).selectOption('active');
-  await form.getByRole('button', { name: 'Guardar cámara', exact: true }).click();
+  await saveCamera(page, form);
+  await action(page, 'grid').first().click();
   await card.getByRole('button', { name: 'Ampliar', exact: true }).click();
   await expect(page.locator('[data-camera-single]')).toContainText(/Stream no configurado|Fuente no configurada/);
   await expect(action(page, 'play')).toBeDisabled();
   await expect(action(page, 'snapshot')).toBeDisabled();
 
-  // Simulate an existing WebRTC configuration through the unchanged backend.
+  // A configured WebRTC camera keeps its protocol when editing other fields.
   await action(page, 'settings').click();
   const legacyValues = await form.evaluate(node => Object.fromEntries(new FormData(node)));
   const legacyResponse = await page.request.post(cameraPath, { form: { ...legacyValues, stream_protocol: 'webrtc' } });
   expect(legacyResponse.ok()).toBe(true);
   await page.goto(cameraPath);
+  await action(page, 'grid').first().click();
   await card.getByRole('button', { name: 'Ampliar', exact: true }).click();
   await action(page, 'settings').click();
   await expect(form.locator('[name="stream_protocol"]')).toHaveValue('webrtc');
   await form.getByLabel('Ubicación', { exact: true }).fill('Ubicación actualizada');
-  await form.getByRole('button', { name: 'Guardar cámara', exact: true }).click();
+  await saveCamera(page, form);
+  await action(page, 'grid').first().click();
   await expect(card).toContainText('Ubicación actualizada');
   const stored = await page.locator('[data-camera-data]').evaluate(node => JSON.parse(node.textContent));
   expect(stored.find(camera => camera.name === name).stream_protocol).toBe('webrtc');

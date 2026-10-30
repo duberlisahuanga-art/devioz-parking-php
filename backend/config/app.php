@@ -24,11 +24,18 @@ final class AppConfig
         return self::get('APP_ENV', 'development') === 'production';
     }
 
+    public static function isHttps(): bool
+    {
+        return RequestSecurity::isHttps($_SERVER, self::get('TRUSTED_PROXY_IPS'));
+    }
+
     public static function storage(): string
     {
         return self::get('APP_STORAGE', dirname(__DIR__) . '/storage');
     }
 }
+
+require_once __DIR__ . '/../services/RequestSecurity.php';
 
 date_default_timezone_set('America/Lima');
 ini_set('display_errors', '0');
@@ -40,7 +47,7 @@ if (PHP_SAPI !== 'cli') {
     header('X-Frame-Options: SAMEORIGIN');
     header('Referrer-Policy: strict-origin-when-cross-origin');
     if (AppConfig::production()) {
-        if (($_SERVER['HTTPS'] ?? '') !== 'on') {
+        if (!AppConfig::isHttps()) {
             http_response_code(503);
             exit('El servicio requiere HTTPS.');
         }

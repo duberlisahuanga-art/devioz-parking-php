@@ -5,7 +5,7 @@ declare(strict_types=1);
 if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start([
         'cookie_httponly' => true,
-        'cookie_secure' => AppConfig::production() || ($_SERVER['HTTPS'] ?? '') === 'on',
+        'cookie_secure' => AppConfig::production() || AppConfig::isHttps(),
         'cookie_samesite' => 'Lax',
         'use_strict_mode' => true,
     ]);

@@ -80,6 +80,40 @@ async function expectAllTracksStopped(page, expectedStreams) {
   }))).toEqual({ streams: expectedStreams, stopped: true });
 }
 
+test('cámaras: pestañas independientes, teclado y liberación de webcam al consultar grabaciones', async ({ page }, testInfo) => {
+  await prepareSyntheticCamera(page);
+  await login(page);
+  await page.goto(cameraPath);
+  const live = page.getByRole('tab', { name: 'Cámaras en vivo', exact: true });
+  const recordings = page.getByRole('tab', { name: 'Grabaciones', exact: true });
+  await expect(live).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.camera-recordings-panel')).toBeHidden();
+  await action(page, 'webcam').click();
+  await connectCamera(page, 1);
+  await live.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(recordings).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(recordings).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tabpanel', { name: 'Grabaciones', exact: true })).toBeVisible();
+  await expect(page.locator('[data-camera-section-panel="live"]')).toBeHidden();
+  await expect(page.locator('.camera-bridge-panel')).toBeHidden();
+  await expect(page.locator('[data-camera-action="webcam-connect"]')).toBeHidden();
+  await expectAllTracksStopped(page, 1);
+  expect(await page.locator('[data-camera-webcam-video]').evaluate(video => video.srcObject)).toBeNull();
+  await page.screenshot({ path: testInfo.outputPath('tabs-recordings.png'), fullPage: true });
+  await recordings.focus();
+  await page.keyboard.press('Home');
+  await expect(live).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(live).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[data-camera-view="webcam"]')).toBeVisible();
+  await expect(page.locator('[data-camera-webcam-status]')).toHaveText('Desconectada');
+  await expect(page.locator('.camera-recordings-panel')).toBeHidden();
+  expect(await page.evaluate(() => window.__cameraProbe.requests.length)).toBe(1);
+  await page.screenshot({ path: testInfo.outputPath('tabs-live.png'), fullPage: true });
+});
+
 test('cámaras: webcam por permiso, captura, pausa y liberación del dispositivo', async ({ page }, testInfo) => {
   test.setTimeout(60000);
   await prepareSyntheticCamera(page);

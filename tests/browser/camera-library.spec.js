@@ -26,7 +26,9 @@ async function openLibrary(page) {
   await page.goto(cameraPath);
   await page.locator('[data-camera-parking]').selectOption('2');
   await page.locator('[data-camera-action="recordings"]').click();
-  await expect(page.locator('[data-camera-view="webcam"]')).toBeVisible();
+  await expect(page.getByRole('tabpanel', { name: 'Grabaciones', exact: true })).toBeVisible();
+  await expect(page.locator('[data-camera-view="webcam"]')).toBeHidden();
+  await expect(page.locator('[data-camera-section-panel="live"]')).toBeHidden();
   await expect(page.locator('[data-recordings-month]')).toHaveValue('2026-10');
   await expect(day(page, '2026-10-05')).toHaveAttribute('aria-pressed', 'true');
   await expect(items(page)).toHaveCount(2);
@@ -89,7 +91,7 @@ test('biblioteca: días, horas, paginación y selección conservada al recargar'
   expect(new URL(page.url()).searchParams.get('recordings_parking')).toBe('2');
   expect(new URL(page.url()).searchParams.get('recordings_hour')).toBe('0');
   await page.reload();
-  await page.locator('[data-camera-action="webcam"]').click();
+  await expect(page.getByRole('tab', { name: 'Grabaciones', exact: true })).toHaveAttribute('aria-selected', 'true');
   await expect(page.locator('[data-camera-parking]')).toHaveValue('2');
   await expect(day(page, '2026-10-05')).toHaveAttribute('aria-pressed', 'true');
   await expect(hour(page, 0)).toHaveAttribute('aria-pressed', 'true');
@@ -105,6 +107,21 @@ test('biblioteca: días, horas, paginación y selección conservada al recargar'
   await expect(page.locator('[data-recordings-month]')).toHaveValue('2026-10');
   await expect(day(page, '2026-10-05')).toHaveAttribute('aria-pressed', 'true');
   await expect(items(page)).toHaveCount(2);
+  const changedParking = page.waitForResponse(response => {
+    const url = new URL(response.url());
+    return url.pathname.endsWith('/grabaciones.php') && url.searchParams.get('action') === 'calendar'
+      && url.searchParams.get('parking_id') === '1';
+  });
+  await page.locator('[data-camera-parking]').selectOption('1');
+  const changedCalendar = await (await changedParking).json();
+  await expect(page.getByRole('tabpanel', { name: 'Grabaciones', exact: true })).toBeVisible();
+  await expect(page.locator('.camera-library__day.has-recordings')).toHaveCount(changedCalendar.days.length);
+  for (const savedDay of changedCalendar.days) {
+    await expect(day(page, savedDay.date).locator('.camera-library__day-count')).toHaveText(String(savedDay.count));
+  }
+  await page.getByRole('tab', { name: 'Cámaras en vivo', exact: true }).click();
+  await expect(page.locator('[data-camera-view="grid"]')).toBeVisible();
+  await expect(page.locator('[data-camera-parking]')).toHaveValue('1');
 });
 
 test('biblioteca: un fallo de consulta conserva el mes pedido para reintentar', async ({ page }) => {

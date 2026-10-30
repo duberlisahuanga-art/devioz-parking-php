@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const liveQualities = new Map();
         let selected = null;
         let currentView = 'grid';
+        let liveView = 'grid';
         let returnView = 'grid';
         let globalMuted = true;
         let zoom = 1;
@@ -349,13 +350,43 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         const show = (view) => {
             if (currentView === 'webcam' && view !== 'webcam') stopWebcam();
+            if (currentView === 'recordings' && view !== 'recordings') {
+                find('[data-recordings-video]').pause();
+                find('[data-clip-video]')?.pause();
+            }
             currentView = view;
+            if (view !== 'recordings') liveView = view;
             parking.disabled = view === 'webcam';
             root.querySelectorAll('[data-camera-view]').forEach((node) => { node.hidden = node.dataset.cameraView !== view; });
+            const section = view === 'recordings' ? 'recordings' : 'live';
+            root.querySelectorAll('[data-camera-section-panel]').forEach((node) => { node.hidden = node.dataset.cameraSectionPanel !== section; });
+            root.querySelectorAll('[data-camera-section]').forEach((node) => {
+                const active = node.dataset.cameraSection === section;
+                node.setAttribute('aria-selected', String(active));
+                node.tabIndex = active ? 0 : -1;
+            });
+            const url = new URL(location.href);
+            if (section === 'recordings') url.searchParams.set('camera_section', section);
+            else url.searchParams.delete('camera_section');
+            history.replaceState(history.state, '', url);
+            if (view === 'recordings' || view === 'webcam') recording?.rememberLibrary();
             root.querySelectorAll('[data-camera-action="grid"],[data-camera-action="single"],[data-camera-action="manage"],[data-camera-action="webcam"]').forEach((node) => {
                 node.setAttribute('aria-pressed', String(node.dataset.cameraAction === view));
             });
             refreshControls();
+        };
+        const openRecordings = () => {
+            destroyPlayers();
+            show('recordings');
+            message('');
+        };
+        const openLive = () => {
+            if (currentView !== 'recordings') return;
+            if (liveView === 'single' && selected) openSingle(selected);
+            else if (liveView === 'webcam') { show('webcam'); updateWebcamControls(); }
+            else if (liveView === 'manage') manage();
+            else if (liveView === 'settings') show('settings');
+            else renderGrid();
         };
         const renderGrid = () => {
             destroyPlayers();
@@ -466,9 +497,18 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch { message('No se pudo capturar el vídeo. Verifica los permisos CORS del endpoint.'); }
         };
         root.addEventListener('click', (event) => {
-            const target = event.target.closest('[data-camera-action],[data-camera-tab]');
+            const target = event.target.closest('[data-camera-action],[data-camera-tab],[data-camera-section]');
             if (!target || !root.contains(target)) return;
             if (target.disabled) return;
+            if (target.dataset.cameraSection) {
+                if (target.dataset.cameraSection === 'live') openLive();
+                else if (recording?.preventLeaving()) {
+                    const error = find('[data-recording-error]');
+                    error.tabIndex = -1;
+                    error.focus();
+                } else openRecordings();
+                return;
+            }
             if (target.dataset.cameraTab) { tab(target.dataset.cameraTab); return; }
             const action = target.dataset.cameraAction;
             if (action === 'reconnect') { players.forEach(player => player.rtc?.retry()); return; }
@@ -476,17 +516,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentView === 'webcam' && ['grid', 'single', 'manage', 'create', 'settings', 'back'].includes(action)
                 && recording?.preventLeaving()) return;
             if (action === 'grid') renderGrid();
-            else if (action === 'webcam' || action === 'recordings') {
+            else if (action === 'webcam') {
                 destroyPlayers();
                 show('webcam');
                 updateWebcamControls();
                 message('');
-                if (action === 'recordings') {
-                    const title = find('#camera-recordings-title');
-                    title.tabIndex = -1;
-                    title.focus({ preventScroll: true });
-                    find('.camera-recordings-panel').scrollIntoView({ block: 'start', behavior: 'instant' });
-                }
             }
             else if (action === 'webcam-connect') connectWebcam();
             else if (action === 'webcam-disconnect') stopWebcam();
@@ -551,11 +585,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 message('Prueba del endpoint guardado iniciada en el navegador.');
             }
         });
+        find('[role="tablist"]').addEventListener('keydown', (event) => {
+            const tabs = [...root.querySelectorAll('[data-camera-section]')];
+            const index = tabs.indexOf(event.target);
+            if (index < 0 || !['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+                : (index + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+            tabs.forEach((tab, position) => { tab.tabIndex = position === next ? 0 : -1; });
+            tabs[next].focus();
+        });
         let previousParking = parking.value;
         parking.addEventListener('change', () => {
             if (recording?.preventLeaving()) { parking.value = previousParking; return; }
             previousParking = parking.value;
-            selected = null; renderGrid();
+            selected = null;
+            liveView = 'grid';
+            if (currentView !== 'recordings') renderGrid();
         });
         form.addEventListener('input', (event) => {
             if (['brightness', 'contrast', 'saturation'].includes(event.target.name)) {
@@ -607,6 +653,7 @@ document.addEventListener('DOMContentLoaded', () => {
             isReady: () => webcamConnected() && frameAvailable(webcamVideo) && !webcamVideo.paused,
             onStateChange: updateWebcamControls
         });
+        previousParking = parking.value;
         document.addEventListener('click', (event) => {
             const link = event.target.closest('a[href]');
             if (!link || link.hasAttribute('download') || link.target === '_blank' || event.ctrlKey || event.metaKey) return;
@@ -639,7 +686,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         checkBridge();
         const initialMobileCamera = list().find(camera => camera.status === 'active' && camera.stream_protocol === 'webrtc');
-        if (window.matchMedia('(max-width: 767px)').matches && initialMobileCamera) openSingle(initialMobileCamera);
+        if (new URL(location.href).searchParams.get('camera_section') === 'recordings') openRecordings();
+        else if (window.matchMedia('(max-width: 767px)').matches && initialMobileCamera) openSingle(initialMobileCamera);
         else renderGrid();
     });
 });

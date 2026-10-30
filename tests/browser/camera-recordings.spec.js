@@ -63,6 +63,7 @@ async function saveRecording(page) {
   await stop.click();
   const saved = await (await savedResponse).json();
   await expect(page.locator('[data-recording-status]')).toContainText('Grabación guardada', { timeout: 30000 });
+  await page.getByRole('tab', { name: 'Grabaciones', exact: true }).click();
   const item = page.locator(`[data-recording-item="${saved.recording.id}"]`);
   await expect(item).toBeVisible();
   return item.getAttribute('data-recording-item');
@@ -74,7 +75,7 @@ test('graba vídeo real del navegador, lo conserva al recargar y permite reprodu
   const id = await saveRecording(page);
   expect(id).toMatch(/^[a-f0-9]{32}$/);
   await page.reload();
-  await page.locator('[data-camera-action="webcam"]').click();
+  await expect(page.getByRole('tab', { name: 'Grabaciones', exact: true })).toHaveAttribute('aria-selected', 'true');
   const item = page.locator(`[data-recording-item="${id}"]`);
   await expect(item).toBeVisible();
   await item.getByRole('button', { name: /Reproducir/ }).click();
@@ -92,6 +93,9 @@ test('graba vídeo real del navegador, lo conserva al recargar y permite reprodu
   }
   await page.locator('[data-recording-action="refresh"]').focus();
   await expect(page.locator('[data-recording-action="refresh"]')).toBeFocused();
+  await page.getByRole('tab', { name: 'Cámaras en vivo', exact: true }).click();
+  await expect(video).toBeHidden();
+  expect(await video.evaluate(el => el.paused)).toBe(true);
 });
 
 test('protege la grabación al navegar y reintenta un guardado sin duplicarlo', async ({ page }) => {
@@ -125,6 +129,9 @@ test('protege la grabación al navegar y reintenta un guardado sin duplicarlo', 
   await page.locator('[data-recording-action="start"]').click();
   await expect(page.locator('[data-recording-status]')).toContainText('Grabando');
   const priorUrl = page.url();
+  await page.getByRole('tab', { name: 'Grabaciones', exact: true }).click();
+  await expect(page.getByRole('tab', { name: 'Cámaras en vivo', exact: true })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('[data-camera-view="webcam"]')).toBeVisible();
   await page.locator('[data-camera-action="grid"]').filter({ visible: true }).first().click();
   expect(page.url()).toBe(priorUrl);
   await expect(page.locator('[data-recording-status]')).toContainText('Grabando');
@@ -135,6 +142,8 @@ test('protege la grabación al navegar y reintenta un guardado sin duplicarlo', 
   expect(simulatedFailure).toBeTruthy();
   expect(savedId).toMatch(/^[a-f0-9]{32}$/);
   await expect(page.locator('[data-recording-local-preview]')).toBeVisible();
+  await page.getByRole('tab', { name: 'Grabaciones', exact: true }).click();
+  await expect(page.locator('[data-camera-view="webcam"]')).toBeVisible();
   const localDownload = page.waitForEvent('download');
   await page.locator('[data-recording-action="download-local"]').click();
   expect((await localDownload).suggestedFilename()).toContain(savedId);
@@ -147,7 +156,7 @@ test('protege la grabación al navegar y reintenta un guardado sin duplicarlo', 
   await expect(page.locator('[data-recording-status]')).toContainText('Grabación guardada', { timeout: 30000 });
   await expect(page.locator(`[data-recording-item="${savedId}"]`)).toHaveCount(1);
   await page.reload();
-  await page.locator('[data-camera-action="webcam"]').click();
+  await page.getByRole('tab', { name: 'Grabaciones', exact: true }).click();
   await expect(page.locator(`[data-recording-item="${savedId}"]`)).toHaveCount(1);
 });
 

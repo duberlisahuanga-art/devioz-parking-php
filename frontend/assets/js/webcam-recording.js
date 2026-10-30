@@ -226,7 +226,7 @@
             this.find('[data-recordings-player]').hidden = true;
         }
         rememberLibrary() {
-            if (this.find('[data-camera-view="webcam"]').hidden) return;
+            if (this.find('[data-camera-view="recordings"]').hidden && this.find('[data-camera-view="webcam"]').hidden) return;
             const url = new URL(location.href);
             const fields = { recordings_parking: this.parkingId(), recordings_month: this.libraryMonth,
                 recordings_date: this.selectedDate, recordings_hour: this.selectedHour, recordings_page: this.page };

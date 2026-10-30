@@ -109,8 +109,11 @@ test('WebRTC: recuperación ante fallo temporal y liberación al cambiar de vist
   await frames(page, 1);
   expect(failures).toBeGreaterThanOrEqual(2);
   await page.evaluate(() => { window.previousReceiver = document.querySelector('[data-camera-single] video').srcObject; });
-  await action(page, 'webcam').click();
+  await action(page, 'recordings').click();
+  await expect(page.getByRole('tabpanel', { name: 'Grabaciones', exact: true })).toBeVisible();
   expect(await page.evaluate(() => window.previousReceiver.getTracks().every(track => track.readyState === 'ended'))).toBe(true);
+  await page.getByRole('tab', { name: 'Cámaras en vivo', exact: true }).click();
+  await frames(page, 1);
 });
 
 test('WebRTC: exige sesión, administrador y CSRF, sin revelar credenciales', async ({ page, browser }) => {

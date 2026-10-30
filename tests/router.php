@@ -18,7 +18,7 @@ putenv('CAMERA_RECORDINGS_PATH='.$root.'/backend/storage/'.$state['database'].'-
 $file=realpath($root.($path==='/'?'/index.php':$path));
 if (!$file || !str_starts_with($file,$root.DIRECTORY_SEPARATOR) || !is_file($file)) { http_response_code(404); exit; }
 if (pathinfo($file,PATHINFO_EXTENSION)==='php') { require $file; return; }
-$types=['css'=>'text/css','js'=>'text/javascript','png'=>'image/png','jpg'=>'image/jpeg','svg'=>'image/svg+xml','webp'=>'image/webp'];
+$types=['css'=>'text/css','js'=>'text/javascript','png'=>'image/png','jpg'=>'image/jpeg','svg'=>'image/svg+xml','webp'=>'image/webp','webmanifest'=>'application/manifest+json','html'=>'text/html'];
 $ext=pathinfo($file,PATHINFO_EXTENSION);
 if (!isset($types[$ext])) { http_response_code(403); exit; }
 header('Content-Type: '.$types[$ext]); readfile($file);

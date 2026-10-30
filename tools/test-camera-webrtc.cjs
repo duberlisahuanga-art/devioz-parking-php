@@ -57,8 +57,9 @@ async function main() {
   created = true;
   const argumentsList = process.argv.slice(2);
   const regressions = argumentsList.includes('--regression');
-  const selected = regressions ? ['cameras.spec.js', 'camera-recordings.spec.js', 'camera-library.spec.js'] : ['camera-webrtc.spec.js'];
-  const test = spawn(process.execPath, [require.resolve('@playwright/test/cli'), 'test', ...selected, ...argumentsList.filter(value => value !== '--regression')], {
+  const pwa = argumentsList.includes('--pwa');
+  const selected = pwa ? ['camera-pwa.spec.js'] : regressions ? ['cameras.spec.js', 'camera-recordings.spec.js', 'camera-library.spec.js'] : ['camera-webrtc.spec.js'];
+  const test = spawn(process.execPath, [require.resolve('@playwright/test/cli'), 'test', ...selected, ...argumentsList.filter(value => !['--regression', '--pwa'].includes(value))], {
     cwd: root, stdio: 'inherit', windowsHide: true,
     env: { ...process.env, PHP_BIN: php, CAMERA_BRIDGE_CONFIG: configurationPath, CAMERA_ICE_CONFIG: configurationPath + '.ice.json', DEVIOZ_WEBRTC_TEST_CONFIG: configurationPath }
   });

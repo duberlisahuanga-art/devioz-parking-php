@@ -49,6 +49,7 @@ render_page_start('Cámaras', 'camaras');
         </details>
     </section>
     <div class="camera-hmi-toolbar">
+        <button type="button" data-pwa-install hidden><i class="bi bi-phone" aria-hidden="true"></i> Instalar Devioz</button>
         <button type="button" data-camera-action="grid"><i class="bi bi-grid"></i> Vista 2x2</button>
         <button type="button" data-camera-action="single"><i class="bi bi-square"></i> Vista individual</button>
         <button type="button" data-camera-action="webcam"><i class="bi bi-laptop" aria-hidden="true"></i> Cámara de este equipo</button>
@@ -57,6 +58,7 @@ render_page_start('Cámaras', 'camaras');
         <button type="button" data-camera-action="fullscreen"><i class="bi bi-arrows-fullscreen"></i> Pantalla completa</button>
         <button type="button" data-camera-action="manage"><i class="bi bi-sliders2"></i> Gestión / Configuración</button>
     </div>
+    <p class="camera-hmi-message" data-pwa-status role="status" aria-live="polite" hidden></p>
     <p class="camera-hmi-message" data-camera-message role="status" aria-live="polite"></p>
     <section data-camera-view="grid">
         <div class="camera-monitor-shell"><header>Monitor en vivo <span>Selecciona un canal para ampliar</span></header><div class="camera-monitor-grid" data-camera-grid></div></div>

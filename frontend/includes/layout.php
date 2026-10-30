@@ -419,6 +419,8 @@ function render_page_start(
     <title>Devioz Parking</title>
     <link rel="icon" type="image/png" href="<?= h(app_url('/frontend/assets/favicon.png?v=' . filemtime(__DIR__ . '/../assets/favicon.png'))) ?>">
 
+    <?php require __DIR__ . '/camera-pwa-head.php'; ?>
+
     <!-- Bootstrap -->
     <link
         href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
